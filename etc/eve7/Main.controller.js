@@ -26,20 +26,18 @@ sap.ui.define(['sap/ui/core/mvc/Controller',
             // msg.byteLength, 'offset', offset);
             this.mgr.UpdateBinary(msg, offset);
 
-            this.mgr.ProcessModified();
-
             return;
          }
 
          console.log("msg len=", msg.length, " txt:", msg.substr(0,50), "...");
-         
+         if (msg == "$$nullbinary$$")
+            return;
+
          var resp = JSON.parse(msg);
 
          if (resp && resp[0] && resp[0].content == "TEveManager::DestroyElementsOf") {
 
             this.mgr.DestroyElements(resp);
-
-            this.mgr.ProcessModified();
 
             this.getView().byId("Summary").getController().UpdateMgr(this.mgr);
 
@@ -58,7 +56,7 @@ sap.ui.define(['sap/ui/core/mvc/Controller',
             for (var n=0;n<viewers.length;++n) {
                if (viewers[n].$view_created || viewers[n].$view_staged) continue;
                viewers[n].$view_staged = true; // mark view which will be created in this loop
-               total_count++;
+               if (viewers[n].fRnrSelf) total_count++;
             }
 
             if (total_count == 0) return;
@@ -70,7 +68,7 @@ sap.ui.define(['sap/ui/core/mvc/Controller',
             for (var n=0;n<viewers.length;++n) {
                var elem = viewers[n];
                var viewid = "EveViewer" + elem.fElementId;
-               if (elem.$view_created) continue;
+               if (elem.$view_created || !viewers[n].fRnrSelf) continue;
 
                // create missing view
                elem.$view_created = true;
@@ -167,6 +165,16 @@ sap.ui.define(['sap/ui/core/mvc/Controller',
          }
       },
       
+      configureToolBar() {
+         var top = this.mgr.childs[0].childs;
+         for (var i = 0; i < top.length; i++) {
+            if (top[i]._typename === "EventManager") {
+               console.log("toolbar id",  this.byId("newEvent"));
+               this.byId("newEvent").setVisible(true);
+            }
+         }
+      },
+
       showHelp : function(oEvent) {
          alert("User support: root-webgui@cern.ch");
       }
