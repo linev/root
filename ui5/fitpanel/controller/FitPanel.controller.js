@@ -18,6 +18,7 @@ sap.ui.define([
    var count = 0;
    var colorContour = "rgb(0,0,0)";
    var colorConf = "rgb(0,0,0)";
+
    return GuiPanelController.extend("rootui5.fitpanel.controller.FitPanel", {
 
          //function called from GuiPanelController
@@ -393,6 +394,7 @@ sap.ui.define([
          // }
 
          // this.oColorPalettePopoverFull.openBy(oEvent.getSource());
+         this.oColorPickerPopoverContour.openBy(oEvent.getSource());
       },
 
 
@@ -407,6 +409,7 @@ sap.ui.define([
          oButtonInnerContour.css('text-shadow','1px 1px 2px #333333');
 
          colorContour = color1;
+
          return colorContour;
 	  },
 
@@ -420,6 +423,7 @@ sap.ui.define([
             });
          }
          this.oColorPickerPopoverConf.openBy(oEvent.getSource());
+
       },
 
 
@@ -434,6 +438,7 @@ sap.ui.define([
          oButtonInnerContour.css('text-shadow','1px 1px 2px #333333');
 
          colorConf = color2;
+
          return colorConf;
 	  },
 

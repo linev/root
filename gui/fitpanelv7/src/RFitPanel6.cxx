@@ -388,7 +388,7 @@ void ROOT::Experimental::RFitPanel6::DrawContour(const std::string &model)
     colorC[i] = std::stoi(obj->fColorContour[i]);
   }
   TColor *color = new TColor(1234, colorC[0], colorC[1], colorC[2]);
-  
+ 
 
   if(!(obj->fContourImpose)) {
     if(graph){
@@ -422,20 +422,18 @@ void ROOT::Experimental::RFitPanel6::DrawScan(const std::string &model)
   auto obj = TBufferJSON::FromJSON<ROOT::Experimental::RFitPanelModel6>(model);
   static TGraph * graph = 0;
   TBackCompFitter *fFitter = 0;
-
   if(graph){
     delete graph;
   }
   graph = new TGraph(static_cast<int>(obj->fScanPoints));
-  //fFitter->Scan(obj->fScanPar, graph, obj->fScanMin, obj->fScanMax);
+  fFitter->Scan(obj->fScanPar, graph, obj->fScanMin, obj->fScanMax);
 
   graph->SetLineColor(kBlue);
   graph->SetLineWidth(2);
- // graph->GetXaxis()->SetTitle(fFitter->GetParName(obj->fScanPar)); ///???????????
+  graph->GetXaxis()->SetTitle(fFitter->GetParName(obj->fScanPar)); ///???????????
   graph->GetYaxis()->SetTitle("FCN");
   graph->Draw("APL");
   gPad->Update();
-
 
   //printf("SCAN Points %d, Par %d, Min %d, Max %d\n", obj->fScanPoints, obj->fScanPar, obj->fScanMin, obj->fScanMax);
 }
