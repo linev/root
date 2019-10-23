@@ -327,7 +327,7 @@ std::unique_ptr<RLevelIter> SysFileElement::GetChildsIter()
 
 std::string SysFileElement::GetContent(const std::string &kind)
 {
-   if ((kind == "text"s) && (RSysDirLevelIter::GetFileIcon(GetName()) == "sap-icon://document-text"s)) {
+   if ((kind == "text"s) && ((RSysDirLevelIter::GetFileIcon(GetName()) == "sap-icon://document-text"s) || RSysDirLevelIter::GetFileIcon(GetName()) == "sap-icon://document"s)) {
       std::ifstream t(GetFullName());
       return std::string(std::istreambuf_iterator<char>(t), std::istreambuf_iterator<char>());
    }
