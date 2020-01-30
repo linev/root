@@ -517,15 +517,14 @@ Int_t TApplicationRemote::CollectInput()
                      m << (Int_t) kRRT_SendFile;
                      // The server needs a file: we send also the related header
                      // if we have it.
-                     char *imp = gSystem->Which(TROOT::GetMacroPath(), fname, kReadPermission);
-                     if (!imp) {
+                     TString impfile = fname;
+
+                     if (!gSystem->FindFile(TROOT::GetMacroPath(), impfile, kReadPermission)) {
                         Error("CollectInput", "file %s not found in path(s) %s",
                                          fname.Data(), TROOT::GetMacroPath());
                         m << (Bool_t) kFALSE;
                         Broadcast(m);
                      } else {
-                        TString impfile = imp;
-                        delete [] imp;
                         Int_t dot = impfile.Last('.');
 
                         // Is there any associated header file

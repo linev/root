@@ -1486,16 +1486,12 @@ void THtml::Convert(const char *filename, const char *title,
       gSystem->MakeDirectory(dir);
 
    // find a file
-   char *cRealFilename =
-       gSystem->Which(fPathInfo.fInputPath, filename, kReadPermission);
 
-   if (!cRealFilename) {
+   TString realFilename = filename;
+   if (!gSystem->FindFile(fPathInfo.fInputPath, realFilename, kReadPermission)) {
       Error("Convert", "Can't find file '%s' !", filename);
       return;
    }
-
-   TString realFilename = cRealFilename;
-   delete[] cRealFilename;
 
    // open source file
    std::ifstream sourceFile;

@@ -328,13 +328,11 @@ TApplicationServer::TApplicationServer(Int_t *argc, char **argv,
    ProcessLine("#include <string>",kTRUE); // for std::string std::iostream.
 
    // Load user functions
-   const char *logon;
-   logon = gEnv->GetValue("Rint.Load", (char *)0);
+   const char *logon = gEnv->GetValue("Rint.Load", (const char *)nullptr);
    if (logon) {
-      char *mac = gSystem->Which(TROOT::GetMacroPath(), logon, kReadPermission);
-      if (mac)
+      TString mac = logon;
+      if (gSystem->FindFile(TROOT::GetMacroPath(), mac, kReadPermission))
          ProcessLine(Form(".L %s", logon), kTRUE);
-      delete [] mac;
    }
 
    // Execute logon macro
@@ -1188,8 +1186,9 @@ Long_t TApplicationServer::ProcessLine(const char *line, Bool_t, Int_t *)
       TString io;
       TString fname = gSystem->SplitAclicMode(line+3, aclicMode, arguments, io);
 
-      char *imp = gSystem->Which(TROOT::GetMacroPath(), fname, kReadPermission);
-      if (!imp) {
+      TString imp = fname;
+
+      if (!gSystem->FindFile(TROOT::GetMacroPath(), imp, kReadPermission)) {
 
          // Make sure that we can write in the directory where we are
          if (gSystem->AccessPathName(gSystem->WorkingDirectory(), kWritePermission)) {
@@ -1252,7 +1251,6 @@ Long_t TApplicationServer::ProcessLine(const char *line, Bool_t, Int_t *)
             }
          }
       }
-      delete [] imp;
    }
 
    // Process the line now
@@ -1292,11 +1290,10 @@ void TApplicationServer::ExecLogon()
    }
 
    // execute also the logon macro specified by "Rint.Logon"
-   const char *logon = gEnv->GetValue("Rint.Logon", (char*)0);
+   const char *logon = gEnv->GetValue("Rint.Logon", (const char *)nullptr);
    if (logon) {
-      char *mac = gSystem->Which(TROOT::GetMacroPath(), logon, kReadPermission);
-      if (mac)
+      TString mac = logon;
+      if (gSystem->FindFile(TROOT::GetMacroPath(), mac, kReadPermission))
          ProcessFile(logon);
-      delete [] mac;
    }
 }

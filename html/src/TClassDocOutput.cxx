@@ -922,11 +922,10 @@ Bool_t TClassDocOutput::CreateDotClassChartIncl(const char* filename) {
    }
    /* do it only for the header
    if (implFileName && strlen(implFileName)) {
-      char* real = gSystem->Which(fHtml->GetInputPath(), implFileName, kReadPermission);
-      if (real) {
-         filesToParse[implFileName] = real;
+      TString real = implFileName;
+      if (gSystem->FindFile(fHtml->GetInputPath(), real, kReadPermission)) {
+         filesToParse[implFileName] = real.Data();
          listFilesToParse.push_back(implFileName);
-         delete real;
       }
    }
    */
