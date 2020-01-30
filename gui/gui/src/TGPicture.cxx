@@ -95,19 +95,19 @@ const TGPicture *TGPicturePool::GetPicture(const char *name)
    TGPicture *pic = (TGPicture *)fPicList->FindObject(pname);
    if (pic && !pic->IsScaled()) {
       if (pic->fPic == kNone)
-         return 0;
+         return nullptr;
       pic->AddReference();
       return pic;
    }
 
-   char *picnam = gSystem->Which(fPath, pname, kReadPermission);
-   if (!picnam) {
+   TString picnam = pname;
+   if (!gSystem->FindFile(fPath, picnam, kReadPermission)) {
       pic = new TGPicture(pname);
       pic->fAttributes.fColormap  = fClient->GetDefaultColormap();
       pic->fAttributes.fCloseness = 40000; // Allow for "similar" colors
       pic->fAttributes.fMask      = kPASize | kPAColormap | kPACloseness;
       fPicList->Add(pic);
-      return 0;
+      return nullptr;
    }
 
    TImage *img = TImage::Open(picnam);
@@ -117,12 +117,10 @@ const TGPicture *TGPicturePool::GetPicture(const char *name)
       pic->fAttributes.fCloseness = 40000; // Allow for "similar" colors
       pic->fAttributes.fMask      = kPASize | kPAColormap | kPACloseness;
       fPicList->Add(pic);
-      delete [] picnam;
-      return 0;
+      return nullptr;
    }
 
    pic = new TGPicture(pname, img->GetPixmap(), img->GetMask());
-   delete [] picnam;
    delete img;
    fPicList->Add(pic);
    return pic;
@@ -153,13 +151,14 @@ const TGPicture *TGPicturePool::GetPicture(const char *name,
    TGPicture *pic = (TGPicture *)fPicList->FindObject(hname);
    if (pic && pic->GetWidth() == new_width && pic->GetHeight() == new_height) {
       if (pic->fPic == kNone)
-         return 0;
+         return nullptr;
       pic->AddReference();
       return pic;
    }
 
-   char *picnam = gSystem->Which(fPath, pname, kReadPermission);
-   if (!picnam) {
+
+   TString picnam = pname;
+   if (!gSystem->FindFile(fPath, picnam, kReadPermission)) {
       pic = new TGPicture(hname, kTRUE);
       pic->fAttributes.fColormap  = fClient->GetDefaultColormap();
       pic->fAttributes.fCloseness = 40000; // Allow for "similar" colors
@@ -167,7 +166,7 @@ const TGPicture *TGPicturePool::GetPicture(const char *name,
       pic->fAttributes.fWidth  = new_width;
       pic->fAttributes.fHeight = new_height;
       fPicList->Add(pic);
-      return 0;
+      return nullptr;
    }
 
    TImage *img = TImage::Open(picnam);
@@ -179,14 +178,12 @@ const TGPicture *TGPicturePool::GetPicture(const char *name,
       pic->fAttributes.fWidth  = new_width;
       pic->fAttributes.fHeight = new_height;
       fPicList->Add(pic);
-      delete [] picnam;
-      return 0;
+      return nullptr;
    }
 
    img->Scale(new_width, new_height);
 
    pic = new TGPicture(hname, img->GetPixmap(), img->GetMask());
-   delete [] picnam;
    delete img;
    fPicList->Add(pic);
    return pic;
