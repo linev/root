@@ -11,6 +11,7 @@
 #include <ROOT/RLogger.hxx>
 
 #include <utility>
+#include <algorithm>
 
 #include "TList.h"
 #include "TClass.h"
@@ -219,3 +220,46 @@ ROOT::Experimental::RAttrMap ROOT::Experimental::RAttrBase::CollectDefaults() co
 
    return res;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/// Produce attribute name for this instance
+/// Deduce member name from as follow: member "fLine" will be translated to "line"
+
+std::string ROOT::Experimental::RAttrBase::GetThisAttrName(const ROOT::Experimental::RAttrBase *prnt)
+{
+   const std::type_info &info = typeid(*prnt);
+   auto parentClass = TClass::GetClass(info);
+   if (!parentClass) {
+      R__ERROR_HERE("gpadv7") << "Missing dictionary for " << info.name() << " class, all attributes should have names";
+      return "";
+   }
+
+   TIter iter(parentClass->GetListOfDataMembers());
+   TObject *member = nullptr;
+   while ((member = iter()) != nullptr) {
+      TDataMember *data_member = dynamic_cast<TDataMember *> (member);
+      if (data_member && ((char *) prnt + data_member->GetOffset() == (char *) this)) {
+         std::string name = data_member->GetName();
+         if (name.length() == 1) {
+            R__ERROR_HERE("gpadv7") << "Member name " << name << " should be longer then 1 symbol";
+            return "";
+         }
+
+         if (name[0] != 'f') {
+            R__ERROR_HERE("gpadv7") << "Member name " << name << " should be starting from 'f' symbol";
+            return "";
+         }
+
+         name = name.substr(1);
+         std::transform(name.begin(), name.end(), name.begin(),
+             [](unsigned char c){ return std::tolower(c); });
+         return name;
+      }
+
+   }
+
+   R__ERROR_HERE("gpadv7") << "Did not found member in class " << parentClass->GetName();
+   return "";
+}
+
+

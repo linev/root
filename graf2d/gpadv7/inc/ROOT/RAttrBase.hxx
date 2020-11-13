@@ -174,6 +174,8 @@ protected:
 
    virtual RAttrMap CollectDefaults() const;
 
+   std::string GetThisAttrName(const RAttrBase *prnt);
+
    virtual bool IsValue() const { return false; }
 
 public:
