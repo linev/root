@@ -45,7 +45,9 @@ ROOT_LINKER_LIBRARY(RIO
   src/TGenCollectionStreamer.cxx
   src/TGenCollectionProxy.cxx
   src/TKey.cxx
+  src/TKeyJSON.cxx
   src/TKeyMapFile.cxx
+  src/TJSONFile.cxx
   src/TLockFile.cxx
   src/TMemFile.cxx
   src/TMapFile.cxx
@@ -106,7 +108,9 @@ ROOT_GENERATE_DICTIONARY(G__RIO
   TGenCollectionStreamer.h
   TGenCollectionProxy.h
   TKey.h
+  TKeyJSON.h
   TKeyMapFile.h
+  TJSONFile.h
   TLockFile.h
   TMemFile.h
   TMapFile.h

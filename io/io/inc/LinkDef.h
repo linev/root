@@ -19,6 +19,8 @@
 #pragma link C++ class TBufferText;
 #pragma link C++ class TBufferJSON;
 #pragma link C++ class TDirectoryFile-;
+#pragma link C++ class TJSONFile;
+#pragma link C++ class TKeyJSON;
 #pragma link C++ class TFile-;
 #pragma link C++ class TFileCacheRead+;
 #pragma link C++ class TFileCacheWrite+;
