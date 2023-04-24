@@ -108,12 +108,13 @@ protected:
          const auto &retTypeID = typeid(typename RetType::value_type);
          const auto &colName = colNames[0]; // we have only one element in there
          const auto *define = fColRegister.GetDefine(colName);
+         auto colType = GetColumnType(colName);
          const auto &expectedTypeID =
-            define ? define->GetTypeId() : RDFInternal::TypeName2TypeID(GetColumnType(colName));
+            define ? define->GetTypeId() : RDFInternal::TypeName2TypeID(colType);
          if (retTypeID != expectedTypeID)
             throw std::runtime_error("Varied values for column \"" + colName + "\" have a different type (" +
                                      RDFInternal::TypeID2TypeName(retTypeID) + ") than the nominal value (" +
-                                     GetColumnType(colName) + ").");
+                                     colType + ").");
       }
 
       // when varying multiple columns, they must be different columns
