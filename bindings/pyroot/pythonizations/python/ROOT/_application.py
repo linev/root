@@ -11,7 +11,7 @@
 import sys
 import time
 
-from cppyy.gbl import gSystem, gInterpreter, gEnv
+from cppyy.gbl import gSystem, gInterpreter, gEnv, gROOT
 
 from libROOTPythonizations import InitApplication, InstallGUIEventInputHook
 
@@ -88,6 +88,11 @@ class PyROOTApplication(object):
             # Python in script mode, start a separate thread for the event processing
             def _process_root_events(self):
                 while self.keep_polling:
+                    if gROOT.IsWebDisplay():
+                        canvases = gROOT.GetListOfCanvases()
+                        for n in range(canvases.GetLast()+1):
+                            canvases.At(n).UpdateAsync()
+
                     gSystem.ProcessEvents()
                     time.sleep(0.01)
             import threading
