@@ -19,9 +19,11 @@
 #include "TSystem.h"
 #include "TBenchmark.h"
 #include "TStyle.h"
+#include "TROOT.h"
 #include "TError.h"
 #include "Getline.h"
 #include "TVirtualMutex.h"
+#include "TVirtualPad.h"
 
 ////////////////////////////////////////////////////////////////////////////
 /// \brief Create an RPyROOTApplication.
@@ -197,6 +199,8 @@ static int EventInputHook()
    // This method is supposed to be called from CPython's command line and
    // drives the GUI
    PyEval_RestoreThread(sInputHookEventThreadState);
+   if (gROOT->IsWebDisplay() && gPad)
+      gPad->UpdateAsync();
    gSystem->ProcessEvents();
    PyEval_SaveThread();
 
