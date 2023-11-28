@@ -16,6 +16,7 @@
 #include "TSystem.h"
 #include "TROOT.h"
 #include "TUrl.h"
+#include "TMD5.h"
 #include "TEnv.h"
 #include "TError.h"
 #include "TClass.h"
@@ -38,6 +39,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <filesystem>
 
 class THttpTimer : public TTimer {
    Long_t fNormalTmout{0};
@@ -1487,4 +1489,70 @@ std::string THttpServer::ReadFileContent(const std::string &filename)
          res.clear();
    }
    return res;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// Returns default file name for root htdigest file
+/// It should be $HOME/.root.htdigest file
+
+std::string THttpServer::HtdigestFileName()
+{
+   std::string fname = gSystem->GetHomeDirectory();
+   if (fname.back() != std::filesystem::path::preferred_separator)
+      fname += std::filesystem::path::preferred_separator;
+   fname.append(".root.htdigest");
+   return fname;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// Create or update htdigest file content with realm/user/password
+/// Method duplicates functionality of htdigest utility
+/// If filename empty, `.root.htdigest` file in home directory will be created
+/// This file is used by default when WebGui.DigestAuth: yes configured for web widgets
+
+Bool_t THttpServer::Htdigest(const std::string &realm, const std::string &user, const std::string &passwd, const std::string &filename)
+{
+   std::string fname = filename.empty() ? HtdigestFileName() : filename;
+
+   std::vector<std::string> lines;
+   std::string line;
+   std::ifstream is(fname);
+   if (is) {
+      while (std::getline(is, line))
+         lines.emplace_back(line);
+   }
+
+   std::string prefix = user;
+   prefix.append(":");
+   prefix.append(realm);
+   prefix.append(":");
+
+   TMD5 md5;
+   std::string data = prefix + passwd;
+   md5.Update((const UChar_t *) data.c_str(), data.length());
+   md5.Final();
+
+   bool found = false;
+   for (auto &entry : lines)
+      if (entry.compare(0, prefix.length(), prefix) == 0) {
+         found = true;
+         entry = prefix + md5.AsString();
+         break;
+      }
+
+   if (!found)
+      lines.emplace_back(prefix + md5.AsString());
+
+   std::ofstream os(fname);
+   if (!os) {
+      ::Error("THttpServer::Htdigest", "Fail to create output file %s", fname.c_str());
+      return kFALSE;
+   }
+
+   for (auto &entry : lines)
+      os << entry << std::endl;
+
+   return kTRUE;
 }

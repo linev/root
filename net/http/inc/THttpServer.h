@@ -195,6 +195,10 @@ public:
    /** Reads content of file from the disk, use std::string in return value */
    static std::string ReadFileContent(const std::string &filename);
 
+   static std::string HtdigestFileName();
+
+   static Bool_t Htdigest(const std::string &realm, const std::string &user, const std::string &passwd, const std::string &fname = {});
+
    ClassDefOverride(THttpServer, 0) // HTTP server for ROOT analysis
 };
 
