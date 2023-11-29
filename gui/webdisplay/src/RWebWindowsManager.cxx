@@ -333,6 +333,8 @@ bool RWebWindowsManager::CreateServer(bool with_http)
    fLaunchTmout = gEnv->GetValue("WebGui.LaunchTmout", 30.);
    // always use loopback
    bool assign_loopback = true; // RWebWindowWSHandler::GetBoolEnv("WebGui.HttpLoopback", 1) == 1;
+   bool digest_auth = RWebWindowWSHandler::GetBoolEnv("WebGui.DigestAuth") == 1;
+   const char *digest_domain = gEnv->GetValue("WebGui.DigestDomain", "");
    const char *http_bind = gEnv->GetValue("WebGui.HttpBind", "");
    bool use_secure = RWebWindowWSHandler::GetBoolEnv("WebGui.UseHttps", 0) == 1;
    const char *ssl_cert = gEnv->GetValue("WebGui.ServerCert", "rootserver.pem");
@@ -376,6 +378,8 @@ bool RWebWindowsManager::CreateServer(bool with_http)
    if (use_unix_socket)
       ntry++;
 
+   bool first_try = true;
+
    while (ntry-- >= 0) {
       if ((http_port == 0) && (fcgi_port <= 0) && !use_unix_socket) {
          if ((http_min <= 0) || (http_max <= http_min)) {
@@ -383,7 +387,14 @@ bool RWebWindowsManager::CreateServer(bool with_http)
             return false;
          }
 
-         http_port = (int)(http_min + (http_max - http_min) * gRandom->Rndm(1));
+         // when digest authentication used - first try semi-random value
+         if (first_try && digest_auth) {
+            TString fname = THttpServer::HtdigestFileName().c_str();
+            http_port = http_min + fname.Hash() % (http_max - http_min);
+         } else
+            http_port = (int)(http_min + (http_max - http_min) * gRandom->Rndm(1));
+
+         first_try = false;
       }
 
       TString engine, url;
@@ -414,6 +425,14 @@ bool RWebWindowsManager::CreateServer(bool with_http)
          }
 
          engine.Append(TString::Format("webgui&thrds=%d&websocket_timeout=%d", http_thrds, http_wstmout));
+
+         if (digest_auth) {
+            engine.Append("&auth_webgui");
+            if (digest_domain && *digest_domain) {
+               engine.Append("&auth_domain=");
+               engine.Append(digest_domain);
+            }
+         }
 
          if (http_maxage >= 0)
             engine.Append(TString::Format("&max_age=%d", http_maxage));

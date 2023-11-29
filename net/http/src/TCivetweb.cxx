@@ -604,7 +604,7 @@ Bool_t TCivetweb::Create(const char *args)
            ssl_cert,
            max_age;
    Int_t socket_mode = 0700;
-   bool use_ws = kTRUE, is_socket = false;
+   bool use_ws = kTRUE, is_socket = false, auth_webgui = false;
 
    // extract arguments
    if (args && *args) {
@@ -650,6 +650,8 @@ Bool_t TCivetweb::Create(const char *args)
             const char *adomain = url.GetValueFromOptions("auth_domain");
             if (adomain)
                auth_domain = adomain;
+
+            auth_webgui = url.HasOption("auth_webgui");
 
             const char *sslc = url.GetValueFromOptions("ssl_cert");
             if (sslc)
@@ -707,6 +709,12 @@ Bool_t TCivetweb::Create(const char *args)
             max_age.Form("%d", fMaxAge);
          }
       }
+   }
+
+   if (auth_webgui && auth_file.IsNull()) {
+      auth_file = THttpServer::HtdigestFileName().c_str();
+      if (auth_domain.IsNull())
+         auth_domain = "root";
    }
 
    num_threads.Form("%d", fNumThreads);
