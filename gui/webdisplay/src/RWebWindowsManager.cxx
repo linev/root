@@ -34,6 +34,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 
 using namespace ROOT;
 
@@ -334,7 +335,7 @@ bool RWebWindowsManager::CreateServer(bool with_http)
    // always use loopback
    bool assign_loopback = true; // RWebWindowWSHandler::GetBoolEnv("WebGui.HttpLoopback", 1) == 1;
    bool digest_auth = RWebWindowWSHandler::GetBoolEnv("WebGui.DigestAuth") == 1;
-   const char *digest_domain = gEnv->GetValue("WebGui.DigestDomain", "");
+   TString digest_domain = gEnv->GetValue("WebGui.DigestDomain", "");
    const char *http_bind = gEnv->GetValue("WebGui.HttpBind", "");
    bool use_secure = RWebWindowWSHandler::GetBoolEnv("WebGui.UseHttps", 0) == 1;
    const char *ssl_cert = gEnv->GetValue("WebGui.ServerCert", "rootserver.pem");
@@ -352,11 +353,34 @@ bool RWebWindowsManager::CreateServer(bool with_http)
       fcgi_port = -1;
 
    int ntry = 100;
+   UInt_t first_rnd = 0;
 
    if ((http_port < 0) && (fcgi_port <= 0) && !use_unix_socket) {
       R__LOG_ERROR(WebGUILog()) << "Not allowed to create HTTP server, check WebGui.HttpPort variable";
       return false;
    }
+
+   if (digest_auth) {
+      std::string fname = THttpServer::HtdigestFileName();
+      std::string line;
+      std::ifstream is(fname);
+      std::getline(is, line); // only first line is important to get domain
+      if (!is || line.empty()) {
+         R__LOG_ERROR(WebGUILog()) << "Fail to open " << fname << " for reading, invoke THttpServer::Htdigest(\"root\",\"<user_name>\",\"<user_password>\") first to create file";
+         return false;
+      }
+
+      if (digest_domain.IsNull()) {
+         auto p1 = line.find(":");
+         auto p2 = line.find(":", p1+1);
+         if ((p1 != std::string::npos) && (p2 != std::string::npos) && (p2 > p1+1))
+            digest_domain = line.substr(p1+1, p2-p1-1).c_str();
+      }
+
+      // when digest authentication used - first try semi-random value
+      first_rnd = TString::Hash(fname.c_str(), fname.length());
+   }
+
 
    if ((http_timer > 0) && !IsUseHttpThread())
       fServer->SetTimer(http_timer);
@@ -378,8 +402,6 @@ bool RWebWindowsManager::CreateServer(bool with_http)
    if (use_unix_socket)
       ntry++;
 
-   bool first_try = true;
-
    while (ntry-- >= 0) {
       if ((http_port == 0) && (fcgi_port <= 0) && !use_unix_socket) {
          if ((http_min <= 0) || (http_max <= http_min)) {
@@ -387,14 +409,11 @@ bool RWebWindowsManager::CreateServer(bool with_http)
             return false;
          }
 
-         // when digest authentication used - first try semi-random value
-         if (first_try && digest_auth) {
-            TString fname = THttpServer::HtdigestFileName().c_str();
-            http_port = http_min + fname.Hash() % (http_max - http_min);
+         if (first_rnd) {
+            http_port = http_min + first_rnd % (http_max - http_min);
+            first_rnd = 0;
          } else
             http_port = (int)(http_min + (http_max - http_min) * gRandom->Rndm(1));
-
-         first_try = false;
       }
 
       TString engine, url;
@@ -428,7 +447,7 @@ bool RWebWindowsManager::CreateServer(bool with_http)
 
          if (digest_auth) {
             engine.Append("&auth_webgui");
-            if (digest_domain && *digest_domain) {
+            if (!digest_domain.IsNull()) {
                engine.Append("&auth_domain=");
                engine.Append(digest_domain);
             }
