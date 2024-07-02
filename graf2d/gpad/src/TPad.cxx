@@ -5172,7 +5172,7 @@ void TPad::Print(const char *filename, Option_t *option)
 
    //==============Save pad/canvas as a SVG file================================
    if (strstr(opt,"svg")) {
-      gVirtualPS = (TVirtualPS*)gROOT->GetListOfSpecials()->FindObject(psname);
+      fPS = (TVirtualPS*)gROOT->GetListOfSpecials()->FindObject(psname);
 
       Bool_t noScreen = kFALSE;
       if (!GetCanvas()->IsBatch() && GetCanvas()->GetCanvasID() == -1) {
@@ -5182,22 +5182,26 @@ void TPad::Print(const char *filename, Option_t *option)
 
       TContext ctxt(this, kTRUE);
 
-      if (!gVirtualPS) {
+      if (!fPS) {
          // Plugin Postscript/SVG driver
          if (auto h = gROOT->GetPluginManager()->FindHandler("TVirtualPS", "svg")) {
             if (h->LoadPlugin() == -1)
                return;
-            h->ExecPlugin(0);
+            fPS = (TVirtualPS *) h->ExecPlugin(0);
+            if (!fPS)
+               return;
          }
       }
 
       // Create a new SVG file
-      if (gVirtualPS) {
-         gVirtualPS->SetName(psname);
-         gVirtualPS->Open(psname);
-         gVirtualPS->SetBit(kPrintingPS);
-         gVirtualPS->NewPage();
+      if (fPS) {
+         fPS->SetName(psname);
+         fPS->Open(psname);
+         fPS->SetBit(kPrintingPS);
+         fPS->NewPage();
       }
+
+      gVirtualPS = fPS; // to support old code
       Paint();
       if (noScreen)
          GetCanvas()->SetBatch(kFALSE);
@@ -5205,7 +5209,8 @@ void TPad::Print(const char *filename, Option_t *option)
       if (!gSystem->AccessPathName(psname))
          Info("Print", "SVG file %s has been created", psname.Data());
 
-      delete gVirtualPS;
+      delete fPS;
+      fPS = nullptr;
       gVirtualPS = nullptr;
 
       return;
@@ -5213,7 +5218,7 @@ void TPad::Print(const char *filename, Option_t *option)
 
    //==============Save pad/canvas as a TeX file================================
    if (strstr(opt,"tex") || strstr(opt,"Standalone")) {
-      gVirtualPS = (TVirtualPS*)gROOT->GetListOfSpecials()->FindObject(psname);
+      fPS = (TVirtualPS*)gROOT->GetListOfSpecials()->FindObject(psname);
 
       Bool_t noScreen = kFALSE;
       if (!GetCanvas()->IsBatch() && GetCanvas()->GetCanvasID() == -1) {
@@ -5223,12 +5228,14 @@ void TPad::Print(const char *filename, Option_t *option)
 
       TContext ctxt(this, kTRUE);
 
-      if (!gVirtualPS) {
+      if (!fPS) {
          // Plugin Postscript/SVG driver
          if (auto h = gROOT->GetPluginManager()->FindHandler("TVirtualPS", "tex")) {
             if (h->LoadPlugin() == -1)
                return;
-            h->ExecPlugin(0);
+            fPS = (TVirtualPS *) h->ExecPlugin(0);
+            if (!fPS)
+               return;
          }
       }
 
@@ -5236,13 +5243,14 @@ void TPad::Print(const char *filename, Option_t *option)
       if (strstr(opt,"Standalone")) standalone = kTRUE;
 
       // Create a new TeX file
-      if (gVirtualPS) {
-         gVirtualPS->SetName(psname);
-         if (standalone) gVirtualPS->SetTitle("Standalone");
-         gVirtualPS->Open(psname);
-         gVirtualPS->SetBit(kPrintingPS);
-         gVirtualPS->NewPage();
+      if (fPS) {
+         fPS->SetName(psname);
+         if (standalone) fPS->SetTitle("Standalone");
+         fPS->Open(psname);
+         fPS->SetBit(kPrintingPS);
+         fPS->NewPage();
       }
+      gVirtualPS = fPS; // to support old code
       Paint();
       if (noScreen)  GetCanvas()->SetBatch(kFALSE);
 
@@ -5254,7 +5262,8 @@ void TPad::Print(const char *filename, Option_t *option)
          }
       }
 
-      delete gVirtualPS;
+      delete fPS;
+      fPS = nullptr;
       gVirtualPS = nullptr;
 
       return;
@@ -5274,8 +5283,8 @@ void TPad::Print(const char *filename, Option_t *option)
       copenb  = psname.EndsWith("["); if (copenb)  psname[psname.Length()-1] = 0;
       ccloseb = psname.EndsWith("]"); if (ccloseb) psname[psname.Length()-1] = 0;
    }
-   gVirtualPS = (TVirtualPS*)gROOT->GetListOfSpecials()->FindObject(psname);
-   if (gVirtualPS) mustOpen = mustClose = kFALSE;
+   fPS = (TVirtualPS*)gROOT->GetListOfSpecials()->FindObject(psname);
+   if (fPS) mustOpen = mustClose = kFALSE;
    if (copen  || copenb)  mustClose = kFALSE;
    if (cclose || ccloseb) mustClose = kTRUE;
 
@@ -5297,7 +5306,7 @@ void TPad::Print(const char *filename, Option_t *option)
    TContext ctxt(this, kTRUE);
    TVirtualPS *psave = gVirtualPS;
 
-   if (!gVirtualPS || mustOpen) {
+   if (!fPS || mustOpen) {
 
       const char *pluginName = "ps"; // Plugin Postscript driver
       if (strstr(opt,"pdf") || strstr(opt,"Title:") || strstr(opt,"EmbedFonts"))
@@ -5308,38 +5317,41 @@ void TPad::Print(const char *filename, Option_t *option)
       if (auto h = gROOT->GetPluginManager()->FindHandler("TVirtualPS", pluginName)) {
          if (h->LoadPlugin() == -1)
             return;
-          h->ExecPlugin(0);
+         fPS = (TVirtualPS *) h->ExecPlugin(0);
+         if (!fPS)
+            return;
       }
 
       // Create a new Postscript, PDF or image file
-      if (gVirtualPS)
-         gVirtualPS->SetName(psname);
+      if (fPS)
+         fPS->SetName(psname);
       const Ssiz_t titlePos = opt.Index("Title:");
       if (titlePos != kNPOS) {
-         if (gVirtualPS)
-            gVirtualPS->SetTitle(opt.Data()+titlePos+6);
+         if (fPS)
+            fPS->SetTitle(opt.Data()+titlePos+6);
          opt.Replace(titlePos,opt.Length(),"pdf");
       }
-      if (gVirtualPS)
-         gVirtualPS->Open(psname,pstype);
-      if (gVirtualPS)
-         gVirtualPS->SetBit(kPrintingPS);
+      if (fPS)
+         fPS->Open(psname,pstype);
+      if (fPS)
+         fPS->SetBit(kPrintingPS);
       if (!copenb) {
          if (!strstr(opt,"pdf") || image) {
-            if (gVirtualPS) gVirtualPS->NewPage();
+            if (fPS) fPS->NewPage();
          }
+         gVirtualPS = fPS; // to support old code
          Paint();
       }
-      if (noScreen) GetCanvas()->SetBatch(kFALSE);
+      if (noScreen)
+         GetCanvas()->SetBatch(kFALSE);
 
       if (mustClose) {
-         gROOT->GetListOfSpecials()->Remove(gVirtualPS);
-         delete gVirtualPS;
-         gVirtualPS = psave;
+         gROOT->GetListOfSpecials()->Remove(fPS);
+         delete fPS;
       } else {
-         gROOT->GetListOfSpecials()->Add(gVirtualPS);
-         gVirtualPS = nullptr;
+         gROOT->GetListOfSpecials()->Add(fPS);
       }
+      fPS = nullptr;
 
       if (!gSystem->AccessPathName(psname)) {
          if (!copen) Info("Print", "%s file %s has been created", opt.Data(), psname.Data());
@@ -5348,27 +5360,29 @@ void TPad::Print(const char *filename, Option_t *option)
    } else {
       // Append to existing Postscript, PDF or GIF file
       if (!ccloseb) {
-         gVirtualPS->NewPage();
+         fPS->NewPage();
+         gVirtualPS = fPS; // to support old code
          Paint();
       }
       const Ssiz_t titlePos = opt.Index("Title:");
       if (titlePos != kNPOS) {
-         gVirtualPS->SetTitle(opt.Data()+titlePos+6);
+         fPS->SetTitle(opt.Data()+titlePos+6);
          opt.Replace(titlePos,opt.Length(),"pdf");
       } else {
-         gVirtualPS->SetTitle("PDF");
+         fPS->SetTitle("PDF");
       }
       if (mustClose) {
          if (cclose) Info("Print", "Current canvas added to %s file %s and file closed", opt.Data(), psname.Data());
          else        Info("Print", "%s file %s has been closed", opt.Data(), psname.Data());
-         gROOT->GetListOfSpecials()->Remove(gVirtualPS);
-         delete gVirtualPS;
-         gVirtualPS = nullptr;
+         gROOT->GetListOfSpecials()->Remove(fPS);
+         delete fPS;
       } else {
          Info("Print", "Current canvas added to %s file %s", opt.Data(), psname.Data());
-         gVirtualPS = nullptr;
       }
+      fPS = nullptr;
    }
+
+   gVirtualPS = psave;
 
    if (strstr(opt,"Preview"))
       gSystem->Exec(TString::Format("epstool --quiet -t6p %s %s", psname.Data(), psname.Data()).Data());
@@ -5377,7 +5391,6 @@ void TPad::Print(const char *filename, Option_t *option)
                           psname.Data()).Data());
       gSystem->Rename("pdf_temp.pdf", psname.Data());
    }
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////

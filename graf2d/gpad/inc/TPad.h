@@ -122,6 +122,9 @@ protected:
    // 3D Viewer support
    TVirtualViewer3D *fViewer3D{nullptr};///<! Current 3D viewer
 
+   // Painting support
+   TVirtualPS *fPS{nullptr}; ///<! current PS drive
+
    void          DestroyExternalViewer3D();
    Int_t         DistancetoPrimitive(Int_t px, Int_t py) override;
    void          ExecuteEvent(Int_t event, Int_t px, Int_t py) override;
@@ -209,6 +212,7 @@ public:
    void              GetRange(Double_t &x1, Double_t &y1, Double_t &x2, Double_t &y2) override;
    void              GetRangeAxis(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax) override;
    void              GetPadPar(Double_t &xlow, Double_t &ylow, Double_t &xup, Double_t &yup) override;
+   TVirtualPS       *GetPS() const override { return fPS; }
    Double_t          GetXlowNDC() const override { return fXlowNDC; }
    Double_t          GetYlowNDC() const override { return fYlowNDC; }
    /// Get width of pad along X in Normalized Coordinates (NDC)

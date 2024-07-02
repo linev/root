@@ -46,6 +46,7 @@ class TLegend;
 class TBox;
 class TVirtualViewer3D;
 class TVirtualPadPainter;
+class TVirtualPS;
 
 class TVirtualPad : public TObject, public TAttLine, public TAttFill,
                     public TAttPad, public TQObject {
@@ -111,6 +112,7 @@ public:
    virtual void     GetRange(Double_t &x1, Double_t &y1, Double_t &x2, Double_t &y2) = 0;
    virtual void     GetRangeAxis(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax) = 0;
    virtual void     GetPadPar(Double_t &xlow, Double_t &ylow, Double_t &xup, Double_t &yup) = 0;
+   virtual TVirtualPS *GetPS() const = 0;
    virtual Double_t GetXlowNDC() const = 0;
    virtual Double_t GetYlowNDC() const = 0;
    virtual Double_t GetWNDC() const = 0;
