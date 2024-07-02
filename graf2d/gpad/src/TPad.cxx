@@ -743,8 +743,10 @@ void TPad::Clear(Option_t *option)
       getchar();
    }
 
-   if (!gPad->IsBatch() && GetPainter()) GetPainter()->ClearDrawable();
-   if (gVirtualPS && gPad == gPad->GetCanvas()) gVirtualPS->NewPage();
+   if (!gPad->IsBatch() && GetPainter())
+      GetPainter()->ClearDrawable();
+   if (gVirtualPS && gPad == gPad->GetCanvas())
+      gVirtualPS->NewPage();
 
    PaintBorder(GetFillColor(), kTRUE);
    fCrosshairPos = 0;
@@ -3054,7 +3056,8 @@ void TPad::GetRangeAxis(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t
 
 void TPad::HighLight(Color_t color, Bool_t set)
 {
-   if (gVirtualPS && gVirtualPS->TestBit(kPrintingPS)) return;
+   if (fPS && fPS->TestBit(kPrintingPS))
+      return;
 
    if (color <= 0) return;
 
@@ -3632,12 +3635,14 @@ bool isCustomPaint(TObject *obj)
 
 void TPad::Paint(Option_t * /*option*/)
 {
+   gVirtualPS = fPS;
+
    if (!fPrimitives)
       fPrimitives = new TList;
    if (fViewer3D && fViewer3D->CanLoopOnPrimitives()) {
       fViewer3D->PadPaint(this);
       Modified(kFALSE);
-      if (GetGLDevice()!=-1 && gVirtualPS) {
+      if (GetGLDevice()!=-1 && fPS) {
          TContext ctxt(this, kFALSE);
          if (gGLManager) gGLManager->PrintViewer(GetViewer3D());
       }
@@ -3671,8 +3676,13 @@ void TPad::Paint(Option_t * /*option*/)
             began3DScene = kTRUE;
          }
 
-         // if custom Paint method exists in the object - it will be invoked
-         if (isCustomPaint(obj))
+         if (obj->InheritsFrom(TPad::Class())) {
+            TPad *subpad = static_cast<TPad *>(obj);
+            subpad->fPS = fPS;
+            subpad->Paint(lnk->GetOption());
+            subpad->fPS = nullptr;
+         } else if (isCustomPaint(obj))
+            // if custom Paint method exists in the object - it will be invoked
             obj->Paint(lnk->GetOption());
          else
             obj->PaintOn(this, lnk->GetOption());
@@ -3682,6 +3692,8 @@ void TPad::Paint(Option_t * /*option*/)
 
    fPadPaint = 0;
    Modified(kFALSE);
+
+   gVirtualPS = nullptr;
 
    // Close the 3D scene if we opened it. This must be done after modified
    // flag is cleared, as some viewers will invoke another paint by marking pad modified again
@@ -3792,8 +3804,8 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
 
 void TPad::PaintBorderPS(Double_t xl,Double_t yl,Double_t xt,Double_t yt,Int_t bmode,Int_t bsize,Int_t dark,Int_t light)
 {
-   if (!gVirtualPS) return;
-   gVirtualPS->DrawFrame(xl, yl, xt, yt, bmode,bsize,dark,light);
+   if (fPS)
+      fPS->DrawFrame(xl, yl, xt, yt, bmode,bsize,dark,light);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3873,8 +3885,12 @@ void TPad::PaintModified()
       auto lnk = pList ? pList->FirstLink() : nullptr;
       while (lnk) {
          auto obj = lnk->GetObject();
-         if (obj->InheritsFrom(TPad::Class()))
-            ((TPad*)obj)->PaintModified();
+         if (obj->InheritsFrom(TPad::Class())) {
+            auto subpad = static_cast<TPad *>(obj);
+            subpad->fPS = fPS;
+            subpad->PaintModified();
+            subpad->fPS = nullptr;
+         }
          lnk = lnk->Next();
       }
       return;
@@ -3882,11 +3898,11 @@ void TPad::PaintModified()
 
    if (fCanvas) TColor::SetGrayscale(fCanvas->IsGrayscale());
 
-   TVirtualPS *saveps = gVirtualPS;
-   if (gVirtualPS) {
-      if (gVirtualPS->TestBit(kPrintingPS))
-         gVirtualPS = nullptr;
-   }
+   TVirtualPS *saveps = fPS;
+   if (fPS && fPS->TestBit(kPrintingPS))
+      fPS = nullptr;
+
+   gVirtualPS = fPS;
 
    Bool_t began3DScene = kFALSE;
    fPadPaint = 1;
@@ -3907,7 +3923,10 @@ void TPad::PaintModified()
       while (lnk) {
          TObject *obj = lnk->GetObject();
          if (obj->InheritsFrom(TPad::Class())) {
-            ((TPad*)obj)->PaintModified();
+            auto subpad = static_cast<TPad *>(obj);
+            subpad->fPS = fPS;
+            subpad->PaintModified();
+            subpad->fPS = nullptr;
          } else if (IsModified() || IsTransparent()) {
 
             // Create a pad 3D viewer if none exists and we encounter a
@@ -3941,7 +3960,8 @@ void TPad::PaintModified()
       if (fViewer3D) fViewer3D->EndScene();
    }
 
-   gVirtualPS = saveps;
+   fPS = saveps;
+   gVirtualPS = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4016,10 +4036,10 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
       }
    }
 
-   if (gVirtualPS) {
-      Int_t style0 = gVirtualPS->GetFillStyle();
+   if (fPS) {
+      Int_t style0 = fPS->GetFillStyle();
       if (option[0] == 's') {
-         gVirtualPS->SetFillStyle(0);
+         fPS->SetFillStyle(0);
       } else {
          if (style0 >= 3100 && style0 < 4000) {
             Double_t xb[4], yb[4];
@@ -4029,12 +4049,12 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
             return;
          }
       }
-      gVirtualPS->DrawBox(x1, y1, x2, y2);
+      fPS->DrawBox(x1, y1, x2, y2);
       if (option[0] == 'l') {
-         gVirtualPS->SetFillStyle(0);
-         gVirtualPS->DrawBox(x1, y1, x2, y2);
+         fPS->SetFillStyle(0);
+         fPS->DrawBox(x1, y1, x2, y2);
       }
-      if (option[0] == 's' || option[0] == 'l') gVirtualPS->SetFillStyle(style0);
+      if (option[0] == 's' || option[0] == 'l') fPS->SetFillStyle(style0);
    }
 
    Modified();
@@ -4099,8 +4119,8 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
       return;
 
    // Paint the fill area with hatches
-   Int_t fillstyle = GetPainter()?GetPainter()->GetFillStyle():1;
-   if (gPad->IsBatch() && GetPainter() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
+   Int_t fillstyle = GetPainter() ? GetPainter()->GetFillStyle() : 1;
+   if (gPad->IsBatch() && GetPainter() && fPS) fillstyle = fPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, &x.front(), &y.front(), fillstyle);
       return;
@@ -4110,8 +4130,8 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
       // invoke the graphics subsystem
       GetPainter()->DrawFillArea(n, &x.front(), &y.front());
 
-   if (gVirtualPS)
-      gVirtualPS->DrawPS(-n, &x.front(), &y.front());
+   if (fPS)
+      fPS->DrawPS(-n, &x.front(), &y.front());
 
    Modified();
 }
@@ -4184,13 +4204,13 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
       GetPainter()->SetLineWidth(lw);
       GetPainter()->SetLineColor(GetPainter()->GetFillColor());
    }
-   if (gVirtualPS) {
-      lws2 = gVirtualPS->GetLineWidth();
-      lss2 = gVirtualPS->GetLineStyle();
-      lcs2 = gVirtualPS->GetLineColor();
-      gVirtualPS->SetLineStyle(1);
-      gVirtualPS->SetLineWidth(lw);
-      gVirtualPS->SetLineColor(gVirtualPS->GetFillColor());
+   if (fPS) {
+      lws2 = fPS->GetLineWidth();
+      lss2 = fPS->GetLineStyle();
+      lcs2 = fPS->GetLineColor();
+      fPS->SetLineStyle(1);
+      fPS->SetLineWidth(lw);
+      fPS->SetLineColor(fPS->GetFillColor());
    }
 
    // Draw the hatches
@@ -4203,10 +4223,10 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
       GetPainter()->SetLineWidth(lws);
       GetPainter()->SetLineColor(lcs);
    }
-   if (gVirtualPS) {
-      gVirtualPS->SetLineStyle(lss2);
-      gVirtualPS->SetLineWidth(lws2);
-      gVirtualPS->SetLineColor(lcs2);
+   if (fPS) {
+      fPS->SetLineStyle(lss2);
+      fPS->SetLineWidth(lws2);
+      fPS->SetLineColor(lcs2);
    }
 }
 
@@ -4381,8 +4401,8 @@ void TPad::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    if (!gPad->IsBatch() && GetPainter())
       GetPainter()->DrawLine(x[0], y[0], x[1], y[1]);
 
-   if (gVirtualPS)
-      gVirtualPS->DrawPS(2, x, y);
+   if (fPS)
+      fPS->DrawPS(2, x, y);
 
    Modified();
 }
@@ -4396,12 +4416,12 @@ void TPad::PaintLineNDC(Double_t u1, Double_t v1,Double_t u2, Double_t v2)
    if (!gPad->IsBatch() && GetPainter())
       GetPainter()->DrawLineNDC(u1, v1, u2, v2);
 
-   if (gVirtualPS) {
+   if (fPS) {
       xw[0] = fX1 + u1*(fX2 - fX1);
       xw[1] = fX1 + u2*(fX2 - fX1);
       yw[0] = fY1 + v1*(fY2 - fY1);
       yw[1] = fY1 + v2*(fY2 - fY1);
-      gVirtualPS->DrawPS(2, xw, yw);
+      fPS->DrawPS(2, xw, yw);
    }
 
    Modified();
@@ -4472,8 +4492,8 @@ void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
       if (iclip == 0 && i < n-2) continue;
       if (!gPad->IsBatch() && GetPainter())
          GetPainter()->DrawPolyLine(np, &x[i1], &y[i1]);
-      if (gVirtualPS) {
-         gVirtualPS->DrawPS(np, &x[i1], &y[i1]);
+      if (fPS) {
+         fPS->DrawPS(np, &x[i1], &y[i1]);
       }
       if (iclip) {
          x[i] = x1;
@@ -4525,8 +4545,8 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       if (iclip == 0 && i < n-2) continue;
       if (!gPad->IsBatch() && GetPainter())
          GetPainter()->DrawPolyLine(np, &x[i1], &y[i1]);
-      if (gVirtualPS) {
-         gVirtualPS->DrawPS(np, &x[i1], &y[i1]);
+      if (fPS) {
+         fPS->DrawPS(np, &x[i1], &y[i1]);
       }
       if (iclip) {
          x[i] = x1;
@@ -4551,13 +4571,13 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
    if (!gPad->IsBatch() && GetPainter())
       GetPainter()->DrawPolyLineNDC(n, x, y);
 
-   if (gVirtualPS) {
+   if (fPS) {
       std::vector<Double_t> xw(n), yw(n);
       for (Int_t i=0; i<n; i++) {
          xw[i] = fX1 + x[i]*(fX2 - fX1);
          yw[i] = fY1 + y[i]*(fY2 - fY1);
       }
-      gVirtualPS->DrawPS(n, xw.data(), yw.data());
+      fPS->DrawPS(n, xw.data(), yw.data());
    }
    Modified();
 }
@@ -4598,8 +4618,8 @@ void TPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
       if (np == 0) continue;
       if (!gPad->IsBatch() && GetPainter())
          GetPainter()->DrawPolyMarker(np, &x[i1], &y[i1]);
-      if (gVirtualPS) {
-         gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
+      if (fPS) {
+         fPS->DrawPolyMarker(np, &x[i1], &y[i1]);
       }
       i1 = -1;
       np = 0;
@@ -4629,8 +4649,8 @@ void TPad::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
       if (np == 0) continue;
       if (!gPad->IsBatch() && GetPainter())
          GetPainter()->DrawPolyMarker(np, &x[i1], &y[i1]);
-      if (gVirtualPS) {
-         gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
+      if (fPS) {
+         fPS->DrawPolyMarker(np, &x[i1], &y[i1]);
       }
       i1 = -1;
       np = 0;
@@ -4648,7 +4668,7 @@ void TPad::PaintText(Double_t x, Double_t y, const char *text)
    if (!gPad->IsBatch() && GetPainter())
       GetPainter()->DrawText(x, y, text, TVirtualPadPainter::kClear);
 
-   if (gVirtualPS) gVirtualPS->Text(x, y, text);
+   if (fPS) fPS->Text(x, y, text);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4661,7 +4681,7 @@ void TPad::PaintText(Double_t x, Double_t y, const wchar_t *text)
    if (!gPad->IsBatch() && GetPainter())
       GetPainter()->DrawText(x, y, text, TVirtualPadPainter::kClear);
 
-   if (gVirtualPS) gVirtualPS->Text(x, y, text);
+   if (fPS) fPS->Text(x, y, text);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4674,10 +4694,10 @@ void TPad::PaintTextNDC(Double_t u, Double_t v, const char *text)
    if (!gPad->IsBatch() && GetPainter())
       GetPainter()->DrawTextNDC(u, v, text, TVirtualPadPainter::kClear);
 
-   if (gVirtualPS) {
+   if (fPS) {
       Double_t x = fX1 + u*(fX2 - fX1);
       Double_t y = fY1 + v*(fY2 - fY1);
-      gVirtualPS->Text(x, y, text);
+      fPS->Text(x, y, text);
    }
 }
 
@@ -4691,10 +4711,10 @@ void TPad::PaintTextNDC(Double_t u, Double_t v, const wchar_t *text)
    if (!gPad->IsBatch() && GetPainter())
       GetPainter()->DrawTextNDC(u, v, text, TVirtualPadPainter::kClear);
 
-   if (gVirtualPS) {
+   if (fPS) {
       Double_t x = fX1 + u*(fX2 - fX1);
       Double_t y = fY1 + v*(fY2 - fY1);
-      gVirtualPS->Text(x, y, text);
+      fPS->Text(x, y, text);
    }
 }
 
@@ -5188,6 +5208,7 @@ void TPad::Print(const char *filename, Option_t *option)
             if (h->LoadPlugin() == -1)
                return;
             fPS = (TVirtualPS *) h->ExecPlugin(0);
+            printf("Create PS engine %p for SVG\n", fPS);
             if (!fPS)
                return;
          }
@@ -5201,7 +5222,6 @@ void TPad::Print(const char *filename, Option_t *option)
          fPS->NewPage();
       }
 
-      gVirtualPS = fPS; // to support old code
       Paint();
       if (noScreen)
          GetCanvas()->SetBatch(kFALSE);
@@ -5209,9 +5229,11 @@ void TPad::Print(const char *filename, Option_t *option)
       if (!gSystem->AccessPathName(psname))
          Info("Print", "SVG file %s has been created", psname.Data());
 
+      printf("Finishing PS engine %p for SVG\n", fPS);
+
+      gVirtualPS = fPS; // to correctly close stream
       delete fPS;
       fPS = nullptr;
-      gVirtualPS = nullptr;
 
       return;
    }
@@ -5250,7 +5272,6 @@ void TPad::Print(const char *filename, Option_t *option)
          fPS->SetBit(kPrintingPS);
          fPS->NewPage();
       }
-      gVirtualPS = fPS; // to support old code
       Paint();
       if (noScreen)  GetCanvas()->SetBatch(kFALSE);
 
@@ -5262,9 +5283,9 @@ void TPad::Print(const char *filename, Option_t *option)
          }
       }
 
+      gVirtualPS = fPS; // to correctly close stream
       delete fPS;
       fPS = nullptr;
-      gVirtualPS = nullptr;
 
       return;
    }
@@ -5273,6 +5294,8 @@ void TPad::Print(const char *filename, Option_t *option)
 
    // in case we read directly from a Root file and the canvas
    // is not on the screen, set batch mode
+
+   TVirtualPS *psave = gVirtualPS;
 
    Bool_t mustOpen  = kTRUE, mustClose = kTRUE,
           copen = kFALSE, cclose = kFALSE, copenb = kFALSE, ccloseb = kFALSE;
@@ -5304,7 +5327,6 @@ void TPad::Print(const char *filename, Option_t *option)
    if (strstr(opt,"Preview"))   pstype = 113;
 
    TContext ctxt(this, kTRUE);
-   TVirtualPS *psave = gVirtualPS;
 
    if (!fPS || mustOpen) {
 
@@ -5339,7 +5361,6 @@ void TPad::Print(const char *filename, Option_t *option)
          if (!strstr(opt,"pdf") || image) {
             if (fPS) fPS->NewPage();
          }
-         gVirtualPS = fPS; // to support old code
          Paint();
       }
       if (noScreen)
@@ -5347,9 +5368,12 @@ void TPad::Print(const char *filename, Option_t *option)
 
       if (mustClose) {
          gROOT->GetListOfSpecials()->Remove(fPS);
+         gVirtualPS = fPS; // to correctly close stream
          delete fPS;
+         gVirtualPS = psave;
       } else {
          gROOT->GetListOfSpecials()->Add(fPS);
+         gVirtualPS = fPS;
       }
       fPS = nullptr;
 
@@ -5361,7 +5385,6 @@ void TPad::Print(const char *filename, Option_t *option)
       // Append to existing Postscript, PDF or GIF file
       if (!ccloseb) {
          fPS->NewPage();
-         gVirtualPS = fPS; // to support old code
          Paint();
       }
       const Ssiz_t titlePos = opt.Index("Title:");
@@ -5375,14 +5398,15 @@ void TPad::Print(const char *filename, Option_t *option)
          if (cclose) Info("Print", "Current canvas added to %s file %s and file closed", opt.Data(), psname.Data());
          else        Info("Print", "%s file %s has been closed", opt.Data(), psname.Data());
          gROOT->GetListOfSpecials()->Remove(fPS);
+         gVirtualPS = fPS; // to correctly close stream
          delete fPS;
+         gVirtualPS = psave;
       } else {
          Info("Print", "Current canvas added to %s file %s", opt.Data(), psname.Data());
+         gVirtualPS = fPS;
       }
       fPS = nullptr;
    }
-
-   gVirtualPS = psave;
 
    if (strstr(opt,"Preview"))
       gSystem->Exec(TString::Format("epstool --quiet -t6p %s %s", psname.Data(), psname.Data()).Data());
@@ -6273,9 +6297,9 @@ void TPad::SetView(TView *view)
 
 void TPad::SetAttFillPS(Color_t color, Style_t style)
 {
-   if (gVirtualPS) {
-      gVirtualPS->SetFillColor(color);
-      gVirtualPS->SetFillStyle(style);
+   if (fPS) {
+      fPS->SetFillColor(color);
+      fPS->SetFillStyle(style);
    }
 }
 
@@ -6284,10 +6308,10 @@ void TPad::SetAttFillPS(Color_t color, Style_t style)
 
 void TPad::SetAttLinePS(Color_t color, Style_t style, Width_t lwidth)
 {
-   if (gVirtualPS) {
-      gVirtualPS->SetLineColor(color);
-      gVirtualPS->SetLineStyle(style);
-      gVirtualPS->SetLineWidth(lwidth);
+   if (fPS) {
+      fPS->SetLineColor(color);
+      fPS->SetLineStyle(style);
+      fPS->SetLineWidth(lwidth);
    }
 }
 
@@ -6296,10 +6320,10 @@ void TPad::SetAttLinePS(Color_t color, Style_t style, Width_t lwidth)
 
 void TPad::SetAttMarkerPS(Color_t color, Style_t style, Size_t msize)
 {
-   if (gVirtualPS) {
-      gVirtualPS->SetMarkerColor(color);
-      gVirtualPS->SetMarkerStyle(style);
-      gVirtualPS->SetMarkerSize(msize);
+   if (fPS) {
+      fPS->SetMarkerColor(color);
+      fPS->SetMarkerStyle(style);
+      fPS->SetMarkerSize(msize);
    }
 }
 
@@ -6308,11 +6332,11 @@ void TPad::SetAttMarkerPS(Color_t color, Style_t style, Size_t msize)
 
 void TPad::SetAttTextPS(Int_t align, Float_t angle, Color_t color, Style_t font, Float_t tsize)
 {
-   if (gVirtualPS) {
-      gVirtualPS->SetTextAlign(align);
-      gVirtualPS->SetTextAngle(angle);
-      gVirtualPS->SetTextColor(color);
-      gVirtualPS->SetTextFont(font);
+   if (fPS) {
+      fPS->SetTextAlign(align);
+      fPS->SetTextAngle(angle);
+      fPS->SetTextColor(color);
+      fPS->SetTextFont(font);
       if (font%10 > 2) {
          Float_t wh = (Float_t)gPad->XtoPixel(gPad->GetX2());
          Float_t hh = (Float_t)gPad->YtoPixel(gPad->GetY1());
@@ -6325,7 +6349,7 @@ void TPad::SetAttTextPS(Int_t align, Float_t angle, Color_t color, Style_t font,
             tsize = dy/(fY2-fY1);
          }
       }
-      gVirtualPS->SetTextSize(tsize);
+      fPS->SetTextSize(tsize);
    }
 }
 
