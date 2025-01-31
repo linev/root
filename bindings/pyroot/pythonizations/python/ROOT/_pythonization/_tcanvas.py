@@ -1,20 +1,28 @@
 from . import pythonization
 
-def _TCanvas_Draw(self, *args, **kwargs):
-   """
-   Invoke normal Draw, but then run event loop until key is pressed
-   """
+def wait_press_windows():
+   import ROOT
+   import msvcrt
+   import time
 
+   done = False
+   while not done:
+      k = ''
+      ROOT.gSystem.ProcessEvents()
+      if msvcrt.kbhit():
+         k = msvcrt.getch()
+         done = k[0] == 32
+      else:
+         time.sleep(0.01)
+
+
+def wait_press_posix():
    import ROOT
    import sys
    import select
    import tty
    import termios
    import time
-
-   self._Draw(*args, **kwargs)
-
-   print("Press <space> key to continue")
 
    old_settings = termios.tcgetattr(sys.stdin)
 
@@ -29,10 +37,32 @@ def _TCanvas_Draw(self, *args, **kwargs):
             c = sys.stdin.read(1)
          if (c == '\x20'):
             break
-         time.sleep(0.001)
+         time.sleep(0.01)
 
    finally:
       termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+
+
+def _TCanvas_Draw(self, *args, **kwargs):
+   """
+   Invoke normal Draw, but then run event loop until key is pressed
+   """
+
+   import ROOT
+   import os
+
+   self._Draw(*args, **kwargs)
+
+   if ROOT.gROOT.IsBatch():
+      return
+
+   print("Press <space> key to continue")
+
+   if os.name == 'nt':
+      wait_press_windows()
+   else:
+      wait_press_posix()
+
 
 
 
