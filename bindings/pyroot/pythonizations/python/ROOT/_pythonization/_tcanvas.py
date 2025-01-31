@@ -62,6 +62,9 @@ def _TCanvas_Draw(self, *args, **kwargs):
    if 'IPython' in sys.modules or 'ipykernel' in sys.modules:
       return
 
+   # ensure that canvas update is performed
+   self.Update()
+
    print("Press <space> key to continue")
 
    if os.name == 'nt':
