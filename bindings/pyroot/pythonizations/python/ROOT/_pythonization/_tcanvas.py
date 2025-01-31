@@ -70,15 +70,11 @@ def _TCanvas_Draw(self, *args, **kwargs):
       wait_press_posix()
 
 
-
-
 @pythonization('TCanvas')
 def pythonize_tcanvas(klass):
     # Parameters:
     # klass: class to be pythonized
 
-
-    # Support hist.Fill(numpy_array) and hist.Fill(numpy_array, numpy_array)
     klass._Draw = klass.Draw
     klass.Draw = _TCanvas_Draw
 
