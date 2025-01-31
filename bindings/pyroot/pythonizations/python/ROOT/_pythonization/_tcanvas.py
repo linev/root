@@ -50,10 +50,16 @@ def _TCanvas_Draw(self, *args, **kwargs):
 
    import ROOT
    import os
+   import sys
 
    self._Draw(*args, **kwargs)
 
+   # no special handling in batch mode
    if ROOT.gROOT.IsBatch():
+      return
+
+   # no special handling in case of notebooks
+   if 'IPython' in sys.modules or 'ipykernel' in sys.modules:
       return
 
    print("Press <space> key to continue")
