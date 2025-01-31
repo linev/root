@@ -43,7 +43,7 @@ def wait_press_posix():
       termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 
-def _TCanvas_Draw(self, *args, **kwargs):
+def _TCanvas_Update(self, *args, **kwargs):
    """
    Invoke normal Draw, but then run event loop until key is pressed
    """
@@ -52,7 +52,7 @@ def _TCanvas_Draw(self, *args, **kwargs):
    import os
    import sys
 
-   self._Draw(*args, **kwargs)
+   self._Update(*args, **kwargs)
 
    # no special handling in batch mode
    if ROOT.gROOT.IsBatch():
@@ -61,9 +61,6 @@ def _TCanvas_Draw(self, *args, **kwargs):
    # no special handling in case of notebooks
    if 'IPython' in sys.modules or 'ipykernel' in sys.modules:
       return
-
-   # ensure that canvas update is performed
-   self.Update()
 
    print("Press <space> key to continue")
 
@@ -78,6 +75,6 @@ def pythonize_tcanvas(klass):
     # Parameters:
     # klass: class to be pythonized
 
-    klass._Draw = klass.Draw
-    klass.Draw = _TCanvas_Draw
+    klass._Update = klass.Update
+    klass.Update = _TCanvas_Update
 
