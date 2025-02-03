@@ -174,14 +174,13 @@ if _is_ipython:
         from . import JsMVA
 
 # Register cleanup
-import atexit
+# import atexit
 
+# def cleanup():
+#    # If spawned, stop thread which processes ROOT events
+#    facade = sys.modules[__name__]
+#    if "app" in facade.__dict__ and hasattr(facade.__dict__["app"], "process_root_events"):
+#        facade.__dict__["app"].keep_polling = False
+#        facade.__dict__["app"].process_root_events.join()
 
-def cleanup():
-    # If spawned, stop thread which processes ROOT events
-    facade = sys.modules[__name__]
-    if "app" in facade.__dict__ and hasattr(facade.__dict__["app"], "process_root_events"):
-        facade.__dict__["app"].keep_polling = False
-        facade.__dict__["app"].process_root_events.join()
-
-atexit.register(cleanup)
+# atexit.register(cleanup)
