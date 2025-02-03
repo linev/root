@@ -59,7 +59,7 @@ def _TCanvas_Update(self, *args, **kwargs):
       return
 
    # no special handling in case of notebooks
-   if 'IPython' in sys.modules or 'ipykernel' in sys.modules:
+   if 'IPython' in sys.modules and sys.modules['IPython'].version_info[0] >= 5:
       return
 
    print("Press <space> key to continue")
