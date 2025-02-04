@@ -1958,11 +1958,12 @@ void TApplication::Terminate(Int_t status)
 {
    Emit("Terminate(Int_t)", status);
 
-   if (fReturnFromRun)
+   if (fOnTerminateFunc)
+      fOnTerminateFunc();
+   else if (fReturnFromRun)
       gSystem->ExitLoop();
-   else {
+   else
       gSystem->Exit(status);
-   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

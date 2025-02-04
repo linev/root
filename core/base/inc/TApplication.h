@@ -54,6 +54,8 @@ public:
       kAbort
    };
 
+   typedef void(*TerminateFunc_t)();
+
 private:
    Int_t              fArgc;            //Number of com   mand line arguments
    char             **fArgv;            //Command line arguments
@@ -69,6 +71,7 @@ private:
    TTimer            *fIdleTimer;       //Idle timer
    TSignalHandler    *fSigHandler;      //Interrupt handler
    EExitOnException   fExitOnException; //Exit on exception option
+   TerminateFunc_t    fOnTerminateFunc = nullptr; // terminate
 
    static Bool_t      fgGraphNeeded;    // True if graphics libs need to be initialized
    static Bool_t      fgGraphInit;      // True if graphics libs initialized
@@ -152,6 +155,7 @@ public:
    Bool_t          IsRunning() const { return fIsRunning; }
    Bool_t          ReturnFromRun() const { return fReturnFromRun; }
    void            SetReturnFromRun(Bool_t ret) { fReturnFromRun = ret; }
+   void            SetOnTerminateFunc(TerminateFunc_t func) { fOnTerminateFunc = func; }
 
    virtual void    LineProcessed(const char *line);   //*SIGNAL*
    virtual void    Terminate(Int_t status = 0);       //*SIGNAL*
