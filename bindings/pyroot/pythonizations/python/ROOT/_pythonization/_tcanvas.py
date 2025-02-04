@@ -1,23 +1,21 @@
 from . import pythonization
 
 def wait_press_windows():
-   import ROOT
+   from ROOT import gSystem
    import msvcrt
    import time
 
-   done = False
-   while not done:
-      k = ''
-      ROOT.gSystem.ProcessEvents()
+   while not gSystem.ProcessEvents():
       if msvcrt.kbhit():
          k = msvcrt.getch()
-         done = k[0] == 32
+         if k[0] == 32:
+            break
       else:
          time.sleep(0.01)
 
 
 def wait_press_posix():
-   import ROOT
+   from ROOT import gSystem
    import sys
    import select
    import tty
@@ -30,8 +28,7 @@ def wait_press_posix():
 
    try:
 
-      while True:
-         ROOT.gSystem.ProcessEvents()
+      while not gSystem.ProcessEvents():
          c = ''
          if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
             c = sys.stdin.read(1)
@@ -48,14 +45,14 @@ def _TCanvas_Update(self, *args, **kwargs):
    Invoke normal Draw, but then run event loop until key is pressed
    """
 
-   import ROOT
+   from ROOT import gROOT
    import os
    import sys
 
    self._Update(*args, **kwargs)
 
    # no special handling in batch mode
-   if ROOT.gROOT.IsBatch():
+   if gROOT.IsBatch():
       return
 
    # no special handling in case of notebooks
