@@ -10,11 +10,14 @@
 
 import sys
 import time
+import os
 
-from cppyy.gbl import gSystem, gInterpreter, gEnv
+from cppyy.gbl import gSystem, gInterpreter, gEnv, gApplication
 
 from libROOTPythonizations import InitApplication, InstallGUIEventInputHook
 
+def pyroot_terminate_func():
+    os._exit(0)
 
 class PyROOTApplication(object):
     """
@@ -85,11 +88,13 @@ class PyROOTApplication(object):
             # - does not work properly on Windows
             self._inputhook_config()
             gEnv.SetValue("WebGui.ExternalProcessEvents", "yes")
+            gApplication.SetOnTerminateFunc(pyroot_terminate_func)
         else:
             # Python in script mode, instead of separate thread methods like canvas.Update should run events
 
             # indicate that ProcessEvents called in different thread, let ignore thread id checks in RWebWindow
             gEnv.SetValue("WebGui.ExternalProcessEvents", "yes")
+            gApplication.SetOnTerminateFunc(pyroot_terminate_func)
 
             # def _process_root_events(self):
             #     while self.keep_polling:
