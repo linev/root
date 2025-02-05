@@ -49,8 +49,8 @@ void benchmarks() {
    summary->AddText("  graphics/tornado.C");
    summary->AddText("  graphics/surfaces.C");
    summary->AddText("  graphs/gr303_zdemo.C");
-   summary->AddText("  geom/geometry.C");
-   summary->AddText("  geom/na49view.C");
+   summary->AddText("  legacy/g3d/geometry.C");
+   summary->AddText("  legacy/g3d/na49view.C");
    summary->AddText("  tree/ntuple1.C");
    summary->AddText("  ");
    bexec(dir,"graphics/framework.C");
