@@ -1,7 +1,13 @@
-#-------------------------------------------------------------------------------
-#
-# Placeholder file to translate the tests to the new CTest system. Meanwhile we
-# define a CTest test that calls 'make' in ${CMAKE_CURRENT_SOURCE_DIR}
-#
-#-------------------------------------------------------------------------------
-ROOTTEST_ADD_OLDTEST(LABELS longtest)
+# test demonstrate problem with directory delete
+# dirdelete.fail.ref shows current - not perfect - implementation
+# in ideal case dirdelete.ref file must be used as reference
+
+ROOTTEST_ADD_TEST(rootfile
+                  MACRO rundirdelete.C
+                  OUTREF dirdelete.fail.ref)
+
+ROOTTEST_ADD_TEST(xmlfile
+                  MACRO rundirdelete.C
+                  MACROARG 1
+                  OUTREF dirdelete.fail.ref)
+
