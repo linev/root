@@ -1,13 +1,11 @@
 #ifndef classes_h
-#ifdef ClingWorkAroundMultipleInclude
 #define classes_h
-#endif
 
 #include "TObject.h"
 #include "marker.h"
 #include <vector>
 
-class TopLevel 
+class TopLevel
 {
 public:
    Int_t fTopLevel;
@@ -16,11 +14,11 @@ public:
    virtual ~TopLevel() {
       // if (Marker::fgDebug==2) fprintf(stdout, "TopLevel destructor for 0x%lx\n", (long)this);
    }
-   
+
    ClassDef(TopLevel,2);
 };
 
-class MidLevel : public TopLevel 
+class MidLevel : public TopLevel
 {
 public:
    Int_t fMidLevel;
@@ -29,7 +27,7 @@ public:
    ClassDef(MidLevel,2);
 };
 
-class TObjTopLevel : public TObject 
+class TObjTopLevel : public TObject
 {
 public:
    Double_t fTObjTopLevel;
@@ -38,7 +36,7 @@ public:
    ClassDef(TObjTopLevel,2);
 };
 
-class Bottom : public MidLevel 
+class Bottom : public MidLevel
 {
 public:
    TObjTopLevel fObject;
@@ -47,7 +45,7 @@ public:
    ClassDef(Bottom,2);
 };
 
-class TObjBottom : public TObject, public MidLevel 
+class TObjBottom : public TObject, public MidLevel
 {
 public:
    Marker fMarker;
@@ -62,7 +60,7 @@ public:
    Side() : fMarker(Class_Name()) {};
    virtual ~Side() {
       // if (Marker::fgDebug==2) fprintf(stdout, "Side destructor for 0x%lx\n",(long)this);
-   }   
+   }
    ClassDef(Side,2);
 };
 
@@ -74,7 +72,7 @@ public:
    ClassDef(BottomDouble,2);
 };
 
-class TObjFirst : public TObject, public TopLevel 
+class TObjFirst : public TObject, public TopLevel
 {
 public:
    Marker fMarker;
@@ -101,7 +99,7 @@ public:
    TopLevel *fTObjSecond;
    vector<TopLevel*> fVec;
    Marker    *fMarker;
-   
+
    void Init() {
       fMidLevel = new MidLevel();
       fTObjTopLevel = new TObjTopLevel();
