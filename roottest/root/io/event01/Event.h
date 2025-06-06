@@ -20,15 +20,17 @@
 #include "TRef.h"
 #include "TRefArray.h"
 #include "TLorentzVector.h"
-#include <list.h>
-#include <vector.h>
-#include <map.h>
-#include <set.h>
-#include <deque.h>
+#include <list>
+#include <vector>
+#include <map>
+#include <set>
+#include <deque>
 #include <string>
 
-#include <iostream.h>
+#include <iostream>
 
+
+using namespace std;
 
 class TDirectory;
 
@@ -44,7 +46,7 @@ public:
 
    ClassDef(UShortVector,1)  //Encapsulated STL vector of UShorts
 };
-   
+
 class EventHeader {
 
 private:
@@ -61,12 +63,12 @@ public:
    Int_t  GetEvtNum() const { return fEvtNum; }
    Int_t  GetRun() const { return fRun; }
    Int_t  GetDate() const { return fDate; }
-//friend Bool_t  operator==(const EventHeader& h1, const EventHeader& h2);
-friend Bool_t  operator<=(const EventHeader& h1, const EventHeader& h2);
+   //friend Bool_t  operator==(const EventHeader& h1, const EventHeader& h2);
+   friend Bool_t  operator<=(const EventHeader &, const EventHeader &);
 
    ClassDef(EventHeader,1)  //Event Header
 };
-inline Bool_t     operator<=(const EventHeader& s1, const EventHeader& s2)
+inline Bool_t     operator<=(const EventHeader &, const EventHeader &)
 { return 0; }
 
 
@@ -74,7 +76,7 @@ class Event : public TObject {
 //class Event  {
 
    enum EEventType {kRaw, kESD, kAOD, kMicro};
-   
+
 private:
    enum {kSize=10};
    EEventType                fEventType;       //Event type
@@ -87,7 +89,7 @@ private:
    Int_t                     fMeasures[kSize]; //an array where dimension is an enum
    UInt_t                    fFlag;            //bit pattern event flag
    Float_t                   fMatrix[4][4];    //a two-dim array
-   Float_t                  *fClosestDistance; //[fNvertex] pointer to an array of floats of length fNvertex 
+   Float_t                  *fClosestDistance; //[fNvertex] pointer to an array of floats of length fNvertex
    Float_t                   fTemperature;     //event temperature
    char                     *fTracksInVertex;  //[fNvertex]
    vector<int>               fVectorint;       //STL vector on ints
@@ -135,7 +137,7 @@ private:
    TArrayI                  *fArrayI;          //a pointer to an array of integers
    UShortVector              fUshort;          //a TObject with an STL vector as base class
    TRef                      fRefH;            //Reference link to fH
-    
+
    static TClonesArray      *fgTracks;
    static TH1F              *fgHist;
 
@@ -143,9 +145,10 @@ public:
                  Event();
                  Event(Int_t i);
    virtual      ~Event();
+   void          Build(Int_t ev, Int_t arg5 = 600, Float_t ptmin = 1);
    void          Clear(Option_t *option ="");
    TDatime      &GetDatime() {return fDatime;}
-   static void   Reset(Option_t *option ="");
+   void          Reset(Option_t *option ="");
    void          ResetHistogramPointer() {fH=0;}
    void          SetNseg(Int_t n) { fNseg = n; }
    void          SetNtrack(Int_t n) { fNtrack = n; }
@@ -159,7 +162,7 @@ public:
    void          SetMatrix(UChar_t x, UChar_t y, Float_t what) { if (x<4&&y<4) fMatrix[x][y]=what;}
    void          SetRandomVertex();
    void          ShowLachaud();
-   
+
    char         *GetType() {return fType;}
    Int_t         GetNtrack() const { return fNtrack; }
    Int_t         GetNseg() const { return fNseg; }
@@ -173,7 +176,7 @@ public:
    Float_t       GetMatrix(UChar_t x, UChar_t y) { return (x<4&&y<4)?fMatrix[x][y]:0; }
 
    UShortVector* GetUshort() { return &fUshort; }
-   
+
    ClassDef(Event,1)  //Event structure
 };
 
@@ -206,11 +209,12 @@ private:
    Char_t      *fTrackName;    //Track name
    TArrayI      fInts;         //some integers
    TRefArray    fJets;         //
-   
+
 public:
    Track() {fPoints=0; fTrackName = 0;}
+   Track(const Track& orig);
    Track(Float_t random);
-   virtual ~Track();
+   virtual ~Track() {}
    Float_t       GetPx() const { return fPx; }
    Float_t       GetPy() const { return fPy; }
    Float_t       GetPz() const { return fPz; }
@@ -243,15 +247,15 @@ class BigTrack : public Track {
 private:
    Int_t          fSpecial;    //The BigTrack validity flag
    TLorentzVector fKine;       //more kinematics
-   
+
 public:
    BigTrack() {fSpecial = 1234; }
    BigTrack(Float_t random, Int_t special);
    virtual ~BigTrack() { }
-   
-   ClassDef(BigTrack,1)  //A Big track 
+
+   ClassDef(BigTrack,1)  //A Big track
 };
-         
+
 
 class HistogramManager {
 
