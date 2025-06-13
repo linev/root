@@ -1,7 +1,16 @@
-#-------------------------------------------------------------------------------
-#
-# Placeholder file to translate the tests to the new CTest system. Meanwhile we
-# define a CTest test that calls 'make' in ${CMAKE_CURRENT_SOURCE_DIR}
-#
-#-------------------------------------------------------------------------------
-ROOTTEST_ADD_OLDTEST(LABELS longtest)
+ROOTTEST_COMPILE_MACRO(typeidtest.C
+                       FIXTURES_SETUP root-io-newClassDef-featuretest-typeidtest-fixture)
+
+ROOTTEST_COMPILE_MACRO(Class.C
+                       FIXTURES_SETUP root-io-newClassDef-featuretest-Class-fixture)
+
+ROOTTEST_COMPILE_MACRO(ClassTrick.C
+                       FIXTURES_SETUP root-io-newClassDef-featuretest-ClassTrick-fixture)
+
+ROOTTEST_ADD_TEST(run
+                  MACRO Run.C
+                  OUTREF run.ref
+                  LABELS longtest
+                  FIXTURES_REQUIRED root-io-newClassDef-featuretest-typeidtest-fixture
+                                    root-io-newClassDef-featuretest-Class-fixture
+                                    root-io-newClassDef-featuretest-ClassTrick-fixture)
