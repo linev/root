@@ -529,7 +529,7 @@ void print_reports()
       StatusPrint(e.pngfile, 0, "  PNG output", e.TestNum, FileSize(e.pngfile), ref.pngref, ref.pngerr);
 
       if (e.execute_ccode) {
-         Int_t ret_code = StatusPrint(e.psfile, -1, "  C file result", e.TestNum,
+         Int_t ret_code = StatusPrint(e.ps2file, -1, "  C file result", e.TestNum,
                                     e.IPS ? FileSize(e.ps2file) : AnalysePS(e.ps2file), ref.ps2ref, ref.ps2err);
 
 #ifndef __CLING__
