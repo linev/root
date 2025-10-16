@@ -1367,7 +1367,12 @@ TString stime(time_t* t, bool utc = false, bool display_time_zone = true)
    char buf[256];
    if (display_time_zone) strftime(buf, sizeof(buf), "%H:%M:%S %Z", tt);
    else                   strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", tt);
-   return TString(buf);
+   TString res = buf;
+   // on some platforms "UTC" used for time zone, lets avoid distrution
+   if (display_time_zone)
+      res.ReplaceAll("UTC", "GMT");
+
+   return res;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
