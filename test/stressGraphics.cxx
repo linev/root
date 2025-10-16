@@ -1808,6 +1808,7 @@ void tgraph3()
 
    C->cd(1);
    g1->Fit("gaus","Q");
+   g1->GetFunction("gaus")->SetParameters(162.343237, -1525754.596742, 548632.482040);
    g1->Draw("AP");
    gPad->SetLogx();
 
@@ -2052,6 +2053,7 @@ void tmultigraph2()
    gr22->SetMarkerColor(kRed+1);
    gr22->SetMarkerStyle(20);
    gr22->Fit("pol3","q ex0");
+   gr22->GetFunction("pol3")->SetParameters(4.830338, 13.642697, 5.092961, -21.695969);
    mg2->Add(gr21,"pl");
    mg2->Add(gr22);
    mg2->Draw("ap");
@@ -2067,6 +2069,8 @@ void tmultigraph2()
    gr32->SetMarkerColor(kRed-1);
    gr32->SetMarkerStyle(20);
    gr32->Fit("pol4","q ex0");
+   gr32->GetFunction("pol4")->SetParameters(3.800743, 16.072495, 17.267410, -58.828117, 24.041571);
+
    mg3->Add(gr31,"pl");
    mg3->Add(gr32);
    mg3->Draw("ap");
@@ -2082,6 +2086,7 @@ void tmultigraph2()
    gr42->SetMarkerColor(kViolet);
    gr42->SetMarkerStyle(20);
    gr42->Fit("pol5","q ex0");
+   gr42->GetFunction("pol5")->SetParameters(3.784774, 16.245375, 17.266562, -60.768103, 27.670699, -1.851469);
    mg4->Add(gr41,"pc");
    mg4->Add(gr42);
    mg4->Draw("ap");
