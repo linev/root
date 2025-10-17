@@ -593,7 +593,8 @@ void TPainter3dAlgorithms::DrawFaceMove1(Int_t *icodes, Double_t *xyz, Int_t np,
          y[0] = p1[1] + ydel*fT[2*it + 0];
          x[1] = p1[0] + xdel*fT[2*it + 1];
          y[1] = p1[1] + ydel*fT[2*it + 1];
-         gPad->PaintPolyLine(2, x, y);
+         if (fT[2*it + 0] != fT[2*it + 1])
+            gPad->PaintPolyLine(2, x, y);
       }
    }
 
@@ -621,7 +622,8 @@ void TPainter3dAlgorithms::DrawFaceMove1(Int_t *icodes, Double_t *xyz, Int_t np,
          y[0] = p1[1] + ydel*fT[2*it + 0];
          x[1] = p1[0] + xdel*fT[2*it + 1];
          y[1] = p1[1] + ydel*fT[2*it + 1];
-         gPad->PaintPolyLine(2, x, y);
+         if (fT[2*it + 0] != fT[2*it + 1])
+            gPad->PaintPolyLine(2, x, y);
       }
    }
 
@@ -681,7 +683,8 @@ void TPainter3dAlgorithms::DrawFaceMove2(Int_t *icodes, Double_t *xyz, Int_t np,
          y[0] = p1[1] + ydel*fT[2*it + 0];
          x[1] = p1[0] + xdel*fT[2*it + 1];
          y[1] = p1[1] + ydel*fT[2*it + 1];
-         gPad->PaintPolyLine(2, x, y);
+         if (fT[2*it + 0] != fT[2*it + 1])
+            gPad->PaintPolyLine(2, x, y);
       }
    }
 
@@ -763,7 +766,8 @@ void TPainter3dAlgorithms::DrawFaceMove3(Int_t *icodes, Double_t *xyz, Int_t np,
             y[0] = p1[1] + ydel*fT[2*it + 0];
             x[1] = p1[0] + xdel*fT[2*it + 1];
             y[1] = p1[1] + ydel*fT[2*it + 1];
-            gPad->PaintPolyLine(2, x, y);
+            if (fT[2*it + 0] != fT[2*it + 1])
+               gPad->PaintPolyLine(2, x, y);
          }
       }
    }
