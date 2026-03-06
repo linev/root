@@ -1,5 +1,4 @@
-
-Processing srun.C("roottest/root/io/newstl/", "roottest/root/io/newstl/6-32-19/")...
+Processing srun.C("roottest/root/io/newstl/", "6-32-19/")...
 Running reading test rvec
 Running reading test vector
 Running reading test deque

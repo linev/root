@@ -26,7 +26,7 @@ ROOTTEST_ADD_TEST(run
 
 ROOTTEST_ADD_TEST(read-6-32-19
                   MACRO srun.C
-                  MACROARG "\"${CMAKE_CURRENT_SOURCE_DIR}/\", \"${CMAKE_CURRENT_SOURCE_DIR}/6-32-19/\""
+                  MACROARG "\"${CMAKE_CURRENT_SOURCE_DIR}/\", \"6-32-19/\""
                   OUTREF stlIoRead.ref
                   FIXTURES_REQUIRED root-io-newstl-test-fixture)
 

@@ -23,24 +23,10 @@ template <class HolderClass> Bool_t checkHolder(const char *testname = "") {
 template <class HolderClass> void write(const char *testname, int nEntry = 3) {
    bool testingTopLevelVectors = true;
 
-<<<<<<< HEAD
-   TString dirname = gROOT->GetVersion();
-   dirname.ReplaceAll(".","-");
-   dirname.ReplaceAll("/","-");
-
-   gSystem->mkdir(dirname);
-   // do not create symlink
-   //gSystem->Unlink("latest");
-   //gSystem->Symlink(dirname,"latest");
-
    TString filename = testname;
-   gSystem->PrependPathName(dirname, filename);
-=======
-   TString filename = testname;
->>>>>>> c5007149389 ([roottest] run io-newstl tests only in current directory)
    filename += ".root";
 
-   auto file = new TFile(filename,"RECREATE", "stl test file", 0);
+   auto file = new TFile(filename, "RECREATE", "stl test file", 0);
 
    HolderClass *holder = new HolderClass( 0 );
 

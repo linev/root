@@ -18,7 +18,10 @@ void srun(const TString &srcpath = "", const TString &readpath = "", int which =
    int result = gSystem->CompileMacro(srcpath + "TestHelpers.C","k");
    if (result != 0 && result != 1) return;
 
-   TString arg = "(\"" + readpath + "\")";
+   TString arg = "()";
+
+   if (readpath.Length() > 0)
+      arg = "(\"" + srcpath + "/" + readpath + "\")";
 
    if ( which & kRVec ) {
 
