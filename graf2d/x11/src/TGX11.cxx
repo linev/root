@@ -805,7 +805,7 @@ void TGX11::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn,
    if (!text || !gCws->textFont || gCws->fAttText.GetTextSize() < 0)
       return;
 
-   XRotSetMagnification(mgn);
+   XRotSetMagnification(mgn * gCws->fAttText.GetTextSize() / 15);
 
    switch (mode) {
 
