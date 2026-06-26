@@ -65,6 +65,7 @@ interpreter/cling/tools/packaging @vgvassilev @hahnjo
 /gui/webdisplay/ @linev
 /gui/cefdisplay/ @linev
 /gui/qt6webdisplay/ @linev
+/gui/qt6canvas/ @linev
 /gui/webgui6/ @linev
 /gui/fitpanelv7/ @linev
 /gui/browsable/ @bellenot @linev
