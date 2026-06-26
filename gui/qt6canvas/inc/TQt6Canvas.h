@@ -13,13 +13,14 @@
 
 #include "TCanvasImp.h"
 
-class TQt6CanvasTimer;
+class QWidget;
 
 class TQt6Canvas : public TCanvasImp {
 
 protected:
 
-   TQt6CanvasTimer *fTimer = nullptr; ///<! timer
+   QWidget *fWidget = nullptr;
+
    Bool_t fFixedSize = kFALSE;      ///<! true when fixed-size canvas is configured
    UInt_t fClientBits = 0;          ///<! latest status bits from client like editor visible or not
 
@@ -38,6 +39,7 @@ public:
    void Show() override;
 
    UInt_t GetWindowGeometry(Int_t &x, Int_t &y, UInt_t &w, UInt_t &h) override;
+
 
    void ShowMenuBar(Bool_t show = kTRUE) override { }
    void ShowStatusBar(Bool_t show = kTRUE) override {  }
