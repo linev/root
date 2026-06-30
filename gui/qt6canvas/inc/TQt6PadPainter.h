@@ -17,10 +17,12 @@
 class QString;
 class QColor;
 class QPen;
+class QBrush;
 #else
 #include <QString>
 #include <QColor>
 #include <QPen>
+#include <QBrush>
 #endif
 
 class TQt6Canvas;
@@ -39,6 +41,7 @@ protected:
    static QString GetFontFamily(Font_t id);
    static QColor GetQColor(Color_t id);
    QPen GetLinePen();
+   QBrush GetFillBrush();
 
 public:
 
