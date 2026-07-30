@@ -17,5 +17,6 @@
 #pragma link C++ class TQt6Canvas+;
 #pragma link C++ class TQt6PadPainter+;
 #pragma link C++ class TQt6GuiFactory+;
+#pragma link C++ class TQt6Application+;
 
 #endif
