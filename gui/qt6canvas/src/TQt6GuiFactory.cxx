@@ -25,6 +25,7 @@ For Qt6 it provides specialization for TCanvasImp and TContextMenuImp classes
 
 #include <iostream>
 
+using namespace ROOT::Experimental;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// TQt6GuiFactory ctor.

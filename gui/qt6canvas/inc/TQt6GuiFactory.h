@@ -15,6 +15,8 @@
 
 #include "TGuiFactory.h"
 
+namespace ROOT {
+namespace Experimental {
 
 class TQt6GuiFactory : public TGuiFactory {
 
@@ -33,5 +35,8 @@ public:
 
    ClassDefOverride(TQt6GuiFactory,0)  //Factory for Qt6 GUI components
 };
+
+} // namespace Experimental
+} // namespace ROOT
 
 #endif
