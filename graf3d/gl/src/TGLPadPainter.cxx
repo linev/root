@@ -91,6 +91,9 @@ void TGLPadPainter::OnPad(TVirtualPad *pad)
 {
    // GL painter does not use proper id for sub-pads (see CreateDrawable)
       // so one always use canvas ID to execute TVirtualX-specific commands
+
+   TPadPainterBase::OnPad(pad);
+
    if (!fWinContext)
       fWinContext = gVirtualX->GetWindowContext(pad->GetCanvasID());
 }
@@ -419,6 +422,7 @@ void TGLPadPainter::DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t 
 void TGLPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode)
 {
    if (fLocked) {
+
       //GL pad painter can be called in non-standard situation:
       //not from TPad::Paint, but
       //from TView3D::ExecuteRotateView. This means in fact,
@@ -432,6 +436,7 @@ void TGLPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, 
                              (TVirtualX::EBoxMode) mode);
       return;
    }
+
 
    if (IsGradientFill(fGlFillAtt.GetFillColor())) {
       Double_t xs[] = {x1, x2, x2, x1};

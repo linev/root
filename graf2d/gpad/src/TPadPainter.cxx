@@ -325,10 +325,10 @@ void TPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EB
    if (fFullyTransparent && mode == TVirtualPadPainter::kFilled)
       return;
 
-   Int_t px1 = fDoubleBuffer ? gPad->XtoPixel(x1) : gPad->XtoAbsPixel(x1);
-   Int_t px2 = fDoubleBuffer ? gPad->XtoPixel(x2) : gPad->XtoAbsPixel(x2);
-   Int_t py1 = fDoubleBuffer ? gPad->YtoPixel(y1) : gPad->YtoAbsPixel(y1);
-   Int_t py2 = fDoubleBuffer ? gPad->YtoPixel(y2) : gPad->YtoAbsPixel(y2);
+   Int_t px1 = fDoubleBuffer ? fPad->XtoPixel(x1) : fPad->XtoAbsPixel(x1);
+   Int_t px2 = fDoubleBuffer ? fPad->XtoPixel(x2) : fPad->XtoAbsPixel(x2);
+   Int_t py1 = fDoubleBuffer ? fPad->YtoPixel(y1) : fPad->YtoAbsPixel(y1);
+   Int_t py2 = fDoubleBuffer ? fPad->YtoPixel(y2) : fPad->YtoAbsPixel(y2);
 
    // Box width must be at least one pixel (WTF is this code???)
    if (TMath::Abs(px2 - px1) < 1)
