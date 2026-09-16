@@ -2539,11 +2539,20 @@ void TCanvas::Update()
 
    if (!fCanvasImp->PerformUpdate(kFALSE)) {
 
-      if (!IsBatch()) FeedbackMode(kFALSE); // Goto double buffer mode
+      if (!IsBatch())
+         FeedbackMode(kFALSE); // Goto double buffer mode
 
-      if (!UseGL() || fGLDevice == -1) PaintModified(); // Repaint all modified pad's
+      if (!UseGL() || fGLDevice == -1)
+         PaintModified(); // Repaint all modified pad's
 
       Flush(); // Copy all pad pixmaps to the screen
+
+      if (!IsBatch()) {
+         // paint interactive operations at the end
+         FeedbackMode(kTRUE);
+         if (!UseGL() || fGLDevice == -1)
+            PaintOperations(kTRUE);
+      }
 
       SetCursor(kCross);
    }

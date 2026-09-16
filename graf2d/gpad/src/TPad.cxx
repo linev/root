@@ -127,6 +127,40 @@ A Pad supports linear and log scales coordinate systems.
 The transformation coefficients are explained in TPad::ResizePad.
 */
 
+
+class TPadDrawOperation {
+   public:
+      virtual void Draw(TVirtualPadPainter *) {}
+      virtual ~TPadDrawOperation() {}
+};
+
+class TPadBoxDrawOperation : public TPadDrawOperation {
+   protected:
+      Double_t fX1, fY1, fX2, fY2;
+      Bool_t fHollow = kFALSE;
+   public:
+      TPadBoxDrawOperation(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Bool_t hollow)
+      {
+         fX1 = x1;
+         fY1 = y1;
+         fX2 = x2;
+         fY2 = y2;
+         fHollow = hollow;
+      }
+      virtual ~TPadBoxDrawOperation() {}
+
+      void Draw(TVirtualPadPainter *pp) override
+      {
+         if (fHollow)
+            pp->SetAttLine({kBlack, 1, 1});
+         else
+            pp->SetAttFill({kBlack, 1001});
+         pp->DrawBox(fX1, fY1, fX2, fY2,
+                     fHollow ? TVirtualPadPainter::kHollow : TVirtualPadPainter::kFilled);
+      }
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Pad default constructor.
 
@@ -3652,7 +3686,7 @@ Double_t TPad::YtoPad(Double_t y) const
 ////////////////////////////////////////////////////////////////////////////////
 /// Paint all primitives in pad.
 
-void TPad::Paint(Option_t * /*option*/)
+void TPad::Paint(Option_t * /* option */)
 {
    if (!fPrimitives)
       fPrimitives = new TList;
@@ -3681,6 +3715,7 @@ void TPad::Paint(Option_t * /*option*/)
    {
       TContext ctxt(this, kTRUE);
 
+      fDrawOperXor.clear();
       PaintBorder(GetFillColor(), kTRUE);
       PaintDate();
 
@@ -3708,6 +3743,8 @@ void TPad::Paint(Option_t * /*option*/)
          auto col = GetHighLightColor();
          if (col > 0) PaintBorder(-col, kTRUE);
       }
+
+      PaintOperations(kFALSE);
    }
 
    fPadPaint = 0;
@@ -3897,8 +3934,10 @@ void TPad::PaintModified()
    fPadPaint = 1;
    {
       TContext ctxt(this, kTRUE);
-      if (IsModified() || IsTransparent())
+      if (IsModified() || IsTransparent()) {
+         fDrawOperXor.clear();
          PaintBorder(GetFillColor(), kTRUE);
+      }
 
       PaintDate();
 
@@ -3944,13 +3983,59 @@ void TPad::PaintModified()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// Perform buffered paint operations
+/// Used for interactivity functionality
+/// immediately after normal painting is performed
+
+void TPad::PaintOperations(Bool_t useXor)
+{
+   auto pp = GetPainter();
+   if (!pp)
+      return;
+
+   Bool_t support_xor = pp->IsNative() && !pp->IsCocoa() && (GetGLDevice() == -1);
+
+   pp->OnPad(this);
+
+   if (useXor && support_xor)
+      for (auto &oper : fDrawOperXor)
+         oper->Draw(pp);
+
+   fDrawOperXor.clear();
+
+   for (auto &oper : fDrawOper)
+      oper->Draw(pp);
+
+   if (useXor && support_xor)
+      std::swap(fDrawOperXor, fDrawOper);
+   else
+      fDrawOper.clear();
+
+   if (!useXor)
+      return;
+
+   TIter next(GetListOfPrimitives());
+   while (auto obj = next()) {
+      if (auto pad = dynamic_cast<TPad *>(obj))
+         pad->PaintOperations(useXor);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 /// Paint box in CurrentPad World coordinates.
 ///
 ///  - if option[0] = 's' the box is forced to be paint with style=0
 ///  - if option[0] = 'l' the box contour is drawn
+///  - if option[0] = 'i' the interactive xor box will be painted
 
 void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t *option)
 {
+   if (!fPadPaint) {
+      if (option && *option == 'i')
+         fDrawOper.emplace_back(std::make_unique<TPadBoxDrawOperation>(x1, y1, x2, y2, option[1] == 'l'));
+      return;
+   }
+
    auto pp = GetPainter();
    if (!pp)
       return;
