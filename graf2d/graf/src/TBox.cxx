@@ -15,12 +15,11 @@
 #include "TROOT.h"
 #include "TBuffer.h"
 #include "TBox.h"
+#include "TBoxInteractive.h"
 #include "TVirtualPad.h"
-#include "TVirtualPadPainter.h"
 #include "TCanvasImp.h"
 #include "TClass.h"
 #include "TMath.h"
-#include "TPoint.h"
 
 
 /** \class TBox
@@ -213,90 +212,6 @@ TBox *TBox::DrawBox(Double_t x1, Double_t y1,Double_t x2, Double_t  y2)
 }
 
 
-class TBoxInteractive : public TVirtualPad::TInteractive {
-   public:
-      Int_t px1 = 0, px2 = 0, py1 = 0, py2 = 0, dpx1 = 0, dpy2 = 0;
-      Double_t oldX1 = 0., oldY1 = 0., oldX2 = 0., oldY2 = 0.;
-      enum { pNone = 0, pA, pB, pC, pD, pTop, pL, pR, pBot, pINSIDE } mode = pNone;
-      Bool_t firstPaint = kTRUE;
-
-      TBoxInteractive(TBox *box)
-      {
-         oldX1 = box->GetX1();
-         oldY1 = box->GetY1();
-         oldX2 = box->GetX2();
-         oldY2 = box->GetY2();
-      }
-
-      Bool_t SelectCorner(Int_t px, Int_t py, Bool_t canX, Bool_t canY, Int_t kMaxDiff)
-      {
-         if (TMath::Abs(px - px1) <= kMaxDiff && TMath::Abs(py - py2) <= kMaxDiff) {
-            mode = canX && canY ? pA : (canX ? pL : pTop);
-         } else if (TMath::Abs(px - px2) <= kMaxDiff && TMath::Abs(py - py2) <= kMaxDiff) {
-            mode = canX && canY ? pB : (canX ? pR : pTop);
-         } else if (TMath::Abs(px - px2) <= kMaxDiff && TMath::Abs(py - py1) <= kMaxDiff) {
-            mode = canX && canY ? pC : (canX ? pR : pBot);
-         } else if (TMath::Abs(px - px1) <= kMaxDiff && TMath::Abs(py - py1) <= kMaxDiff) {
-            mode = canX && canY ? pD : (canX ? pL : pBot);
-         } else if ((px > px1 + kMaxDiff && px < px2 - kMaxDiff) && TMath::Abs(py - py2) < kMaxDiff) {
-            mode = canY ? pTop : pNone;
-         } else if ((px > px1 + kMaxDiff && px < px2 - kMaxDiff) && TMath::Abs(py - py1) < kMaxDiff) {
-            mode = canY ? pBot : pNone;
-         } else if ((py > py2 + kMaxDiff && py < py1 - kMaxDiff) && TMath::Abs(px - px1) < kMaxDiff) {
-            mode = canX ? pL : pNone;
-         } else if ((py > py2 + kMaxDiff && py < py1 - kMaxDiff) && TMath::Abs(px - px2) < kMaxDiff) {
-            mode = canX ? pR : pNone;
-         } else if ((px > px1+kMaxDiff && px < px2-kMaxDiff) && (py > py2+kMaxDiff && py < py1-kMaxDiff)) {
-            dpx1 = px - px1; // cursor position relative to top-left corner
-            dpy2 = py - py2;
-            mode = pINSIDE;
-         } else {
-            mode = pNone;
-         }
-         return mode != pNone;
-      }
-
-      Bool_t IsOpaque(TVirtualPad &parent) {
-         if (mode == pINSIDE)
-            return parent.OpaqueMoving();
-         return parent.OpaqueResizing();
-      }
-
-      void SetCursor(TVirtualPad &parent, Bool_t is_down)
-      {
-         switch (mode) {
-            case pNone: parent.SetCursor(kCross); break;
-            case pA: parent.SetCursor(kTopLeft); break;
-            case pB: parent.SetCursor(kTopRight); break;
-            case pC: parent.SetCursor(kBottomRight); break;
-            case pD: parent.SetCursor(kBottomLeft); break;
-            case pTop: parent.SetCursor(kTopSide); break;
-            case pL: parent.SetCursor(kLeftSide); break;
-            case pR: parent.SetCursor(kRightSide); break;
-            case pBot: parent.SetCursor(kBottomSide); break;
-            case pINSIDE: parent.SetCursor(is_down ? kMove : kCross); break;
-         }
-      }
-
-      char GetGuideChar()
-      {
-         switch(mode) {
-            case pINSIDE: return 'i';
-            case pTop: return  't';
-            case pBot: return 'b';
-            case pL: return 'l';
-            case pR: return 'r';
-            case pA: return '1';
-            case pB: return '2';
-            case pC: return '3';
-            case pD: return '4';
-            default: return 0; // not involved
-         }
-      }
-
-};
-
-
 ////////////////////////////////////////////////////////////////////////////////
 /// Execute action corresponding to one event.
 ///
@@ -336,42 +251,16 @@ void TBox::ExecuteEvent(Int_t event, Int_t px, Int_t py)
       event = event % 10000;
    }
 
-   constexpr Int_t kMaxDiff = 7;
-   constexpr Int_t kMinSize = 20;
-
    auto inter = dynamic_cast<TBoxInteractive *>(parent.Interactive(this));
 
-   // convert to user coordinates and either paint ot set back
-   auto paint_or_set = [&parent,&inter,isBox,canX,canY,liveUpdate,this](Bool_t paint)
-   {
-      auto x1 = parent.AbsPixeltoX(inter->px1);
-      auto y1 = parent.AbsPixeltoY(inter->py1);
-      auto x2 = parent.AbsPixeltoX(inter->px2);
-      auto y2 = parent.AbsPixeltoY(inter->py2);
-      if (paint) {
-         if (inter->firstPaint)
-            inter->firstPaint = kFALSE;
-         else {
-            auto pp = parent.GetPainter();
-            pp->SetAttLine({GetFillColor() > 0 ? GetFillColor() : (Color_t) 1, GetLineStyle(), 2});
-            pp->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
-         }
+   auto setNewValues = [&inter, this, canX, canY]() {
+      if (canX) {
+         SetX1(inter->newX1);
+         SetX2(inter->newX2);
       }
-      if (liveUpdate || !paint) {
-         if (isBox) {
-            x1 = parent.PadtoX(x1);
-            x2 = parent.PadtoX(x2);
-            y1 = parent.PadtoY(y1);
-            y2 = parent.PadtoY(y2);
-         }
-         if (canX) {
-            SetX1(x1);
-            SetX2(x2);
-         }
-         if (canY) {
-            SetY1(y1);
-            SetY2(y2);
-         }
+      if (canY) {
+         SetY1(inter->newY1);
+         SetY2(inter->newY2);
       }
    };
 
@@ -380,35 +269,28 @@ void TBox::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    switch (event) {
 
    case kMouseEnter:
-      if (fTip) parent.ResetToolTip(fTip);
+      if (fTip)
+         parent.ResetToolTip(fTip);
       break;
 
    case kArrowKeyPress:
    case kButton1Down:
-      inter = new TBoxInteractive(this);
+      inter = new TBoxInteractive(isBox, GetX1(), GetY1(), GetX2(), GetY2());
       parent.Interactive(this, inter);
       // No break !!!
 
    case kMouseMotion: {
       // use dummy when simple motion without mouse down performed
-      TBoxInteractive dummy(this);
+      TBoxInteractive dummy(isBox);
       if (!inter) inter = &dummy;
+      inter->CalcPixelCoord(parent, GetX1(), GetY1(), GetX2(), GetY2());
 
-      inter->px1 = parent.XtoAbsPixel(isBox ? parent.XtoPad(GetX1()) : GetX1());
-      inter->py1 = parent.YtoAbsPixel(isBox ? parent.YtoPad(GetY1()) : GetY1());
-      inter->px2 = parent.XtoAbsPixel(isBox ? parent.XtoPad(GetX2()) : GetX2());
-      inter->py2 = parent.YtoAbsPixel(isBox ? parent.YtoPad(GetY2()) : GetY2());
-      if (inter->px1 > inter->px2)
-         std::swap(inter->px1, inter->px2);
-      if (inter->py1 < inter->py2)
-         std::swap(inter->py1, inter->py2);
-
-      if (!inter->SelectCorner(px, py, canX, canY, kMaxDiff)) {
+      if (!inter->SelectCorner(px, py, canX, canY)) {
          // refuse interactive changes
          parent.Interactive();
       } else {
          inter->SetCursor(parent, event == kButton1Down);
-         fResizing = (inter->mode != TBoxInteractive::pINSIDE) && (event != kMouseMotion);
+         fResizing = inter->IsResizing() && (event != kMouseMotion);
       }
 
       break;
@@ -419,73 +301,17 @@ void TBox::ExecuteEvent(Int_t event, Int_t px, Int_t py)
       if (!inter)
          return;
 
-      Bool_t is_opaque = inter->IsOpaque(parent);
-
-      Int_t px1p = parent.XtoAbsPixel(parent.GetX1()) + parent.GetBorderSize();
-      Int_t py1p = parent.YtoAbsPixel(parent.GetY1()) - parent.GetBorderSize();
-      Int_t px2p = parent.XtoAbsPixel(parent.GetX2()) - parent.GetBorderSize();
-      Int_t py2p = parent.YtoAbsPixel(parent.GetY2()) + parent.GetBorderSize();
-      if (px1p > px2p)
-         std::swap(px1p, px2p);
-      if (py1p < py2p)
-         std::swap(py1p, py2p);
-
-      if (!is_opaque)
-         paint_or_set(kTRUE);
-
-      switch (inter->mode) {
-      case TBoxInteractive::pNone:
+      if (!inter->ProcessMouseMove(parent, px, py, canX, canY))
          return;
-      case TBoxInteractive::pA:
-         inter->px1 = TMath::Max(px1p, TMath::Min(px, inter->px2 - kMinSize));
-         inter->py2 = TMath::Max(py2p, TMath::Min(py, inter->py1 - kMinSize));
-         break;
-      case TBoxInteractive::pB:
-         inter->px2 = TMath::Min(px2p, TMath::Max(px, inter->px1 + kMinSize));
-         inter->py2 = TMath::Max(py2p, TMath::Min(py, inter->py1 - kMinSize));
-         break;
-      case TBoxInteractive::pC:
-         inter->px2 = TMath::Min(px2p, TMath::Max(px, inter->px1 + kMinSize));
-         inter->py1 = TMath::Min(py1p, TMath::Max(py, inter->py2 + kMinSize));
-         break;
-      case TBoxInteractive::pD:
-         inter->px1 = TMath::Max(px1p, TMath::Min(px, inter->px2 - kMinSize));
-         inter->py1 = TMath::Min(py1p, TMath::Max(py, inter->py2 + kMinSize));
-         break;
-      case TBoxInteractive::pTop:
-         inter->py2 = TMath::Max(py2p, TMath::Min(py, inter->py1 - kMinSize));
-         break;
-      case TBoxInteractive::pBot:
-         inter->py1 = TMath::Min(py1p, TMath::Max(py, inter->py2 + kMinSize));
-         break;
-      case TBoxInteractive::pL:
-         inter->px1 = TMath::Max(px1p, TMath::Min(px, inter->px2 - kMinSize));
-         break;
-      case TBoxInteractive::pR:
-         inter->px2 = TMath::Min(px2p, TMath::Max(px, inter->px1 + kMinSize));
-         break;
-      case TBoxInteractive::pINSIDE:
-         if (canX) {
-            inter->px2 += px - inter->dpx1 - inter->px1;
-            inter->px1 = px - inter->dpx1;
-            if (inter->px1 < px1p) { inter->px2 += px1p - inter->px1; inter->px1 = px1p; }
-            if (inter->px2 > px2p) { inter->px1 -= inter->px2 - px2p; inter->px2 = px2p; }
-         }
-         if (canY) {
-            inter->py1 += py - inter->dpy2 - inter->py2;
-            inter->py2 = py - inter->dpy2;
-            if (inter->py1 > py1p) { inter->py2 -= inter->py1 - py1p; inter->py1 = py1p; }
-            if (inter->py2 < py2p) { inter->py1 += py2p - inter->py2; inter->py2 = py2p; }
-         }
-         break;
-      }
 
-      paint_or_set(!is_opaque);
+      inter->ApplyChanges(parent);
 
-      if (is_opaque) {
-         char c = inter->GetGuideChar();
-         if (c)
-            parent.ShowGuidelines(this, event, c, true);
+      if (liveUpdate)
+         setNewValues();
+
+      if (inter->IsOpaque(parent)) {
+         setNewValues();
+         parent.ShowGuidelines(this, event, inter->GetGuideChar(), true);
          parent.Modified(kTRUE);
       }
 
@@ -504,9 +330,8 @@ void TBox::ExecuteEvent(Int_t event, Int_t px, Int_t py)
             SetX2(inter->oldX2);
             SetY2(inter->oldY2);
          }
-      } else if (inter && !inter->IsOpaque(parent)) {
-         // when non-opaque moving used set coordinates at very end
-         paint_or_set(kFALSE);
+      } else if (inter && !inter->IsOpaque(parent) && (inter->newX1 != inter->newX2)) {
+         setNewValues();
       }
 
       parent.Modified();
