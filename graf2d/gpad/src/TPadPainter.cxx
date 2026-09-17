@@ -381,7 +381,7 @@ void TPadPainter::DrawPolyLine(Int_t n, const Double_t *xs, const Double_t *ys)
       return;
    }
 
-   DrawPolyLineAux(gPad, fWinContext, !fDoubleBuffer, n, xs, ys);
+   DrawPolyLineAux(fPad, fWinContext, !fDoubleBuffer, n, xs, ys);
 }
 
 
@@ -398,7 +398,7 @@ void TPadPainter::DrawPolyLine(Int_t n, const Float_t *xs, const Float_t *ys)
       return;
    }
 
-   DrawPolyLineAux(gPad, fWinContext, !fDoubleBuffer, n, xs, ys);
+   DrawPolyLineAux(fPad, fWinContext, !fDoubleBuffer, n, xs, ys);
 }
 
 
@@ -418,11 +418,11 @@ void TPadPainter::DrawPolyLineNDC(Int_t n, const Double_t *u, const Double_t *v)
    std::vector<TPoint> xy(n);
 
    for (Int_t i = 0; i < n; ++i) {
-      xy[i].fX = (SCoord_t)gPad->UtoPixel(u[i]);
-      xy[i].fY = (SCoord_t)gPad->VtoPixel(v[i]);
+      xy[i].fX = (SCoord_t)fPad->UtoPixel(u[i]);
+      xy[i].fY = (SCoord_t)fPad->VtoPixel(v[i]);
    }
 
-   gVirtualX->DrawPolyLineW(fWinContext, n, &xy[0]);
+   gVirtualX->DrawPolyLineW(fWinContext, n, xy.data());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

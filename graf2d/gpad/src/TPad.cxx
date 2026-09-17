@@ -134,29 +134,35 @@ class TPadDrawOperation {
       virtual ~TPadDrawOperation() {}
 };
 
-class TPadBoxDrawOperation : public TPadDrawOperation {
+class TPadPolyDrawOperation : public TPadDrawOperation {
    protected:
-      Double_t fX1, fY1, fX2, fY2;
-      Bool_t fHollow = kFALSE;
+      std::vector<Double_t> fX, fY;
+      Width_t fLWidth = 0;
+      Bool_t fNDC = kFALSE;
    public:
-      TPadBoxDrawOperation(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Bool_t hollow)
+      template<typename T>
+      TPadPolyDrawOperation(Int_t n, T *x, T *y, Width_t lwidth = -111, Bool_t ndc = kFALSE)
       {
-         fX1 = x1;
-         fY1 = y1;
-         fX2 = x2;
-         fY2 = y2;
-         fHollow = hollow;
+         fX.assign(x, x + n);
+         fY.assign(y, y + n);
+         fLWidth = lwidth;
+         fNDC = ndc;
       }
-      virtual ~TPadBoxDrawOperation() {}
+      virtual ~TPadPolyDrawOperation() {}
 
       void Draw(TVirtualPadPainter *pp) override
       {
-         if (fHollow)
-            pp->SetAttLine({kBlack, 1, 1});
-         else
+         if (fLWidth != -111) {
+            if (fLWidth < 1) fLWidth = 1;
+            pp->SetAttLine({kBlack, 1, fLWidth});
+            if (fNDC)
+               pp->DrawPolyLineNDC(fX.size(), fX.data(), fY.data());
+            else
+               pp->DrawPolyLine(fX.size(), fX.data(), fY.data());
+         } else {
             pp->SetAttFill({kBlack, 1001});
-         pp->DrawBox(fX1, fY1, fX2, fY2,
-                     fHollow ? TVirtualPadPainter::kHollow : TVirtualPadPainter::kFilled);
+            pp->DrawFillArea(fX.size(), fX.data(), fY.data());
+         }
       }
 };
 
@@ -1182,6 +1188,9 @@ void TPad::CopyPixmap()
    if (fPixmapID != -1)
       if (auto pp = GetPainter())
          pp->CopyDrawable(fPixmapID, px, py);
+
+   // if pixmap copied, stored XOR operations are no longer valid
+   fDrawOperXor.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4030,15 +4039,18 @@ void TPad::PaintOperations(Bool_t useXor)
 
 void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t *option)
 {
-   if (!fPadPaint) {
-      if (option && *option == 'i')
-         fDrawOper.emplace_back(std::make_unique<TPadBoxDrawOperation>(x1, y1, x2, y2, option[1] == 'l'));
-      return;
-   }
-
    auto pp = GetPainter();
    if (!pp)
       return;
+
+   if (!GetPadPaint()) {
+      if (option && strchr(option, 'i')) {
+         Double_t x[5] = {x1, x2, x2, x1, x1};
+         Double_t y[5] = {y1, y1, y2, y2, y1};
+         fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(5, x, y, strchr(option, 'l') ? pp->GetLineWidth() : -111));
+      }
+      return;
+   }
 
    pp->OnPad(this);
 
@@ -4104,25 +4116,42 @@ void TPad::PaintFillArea(Int_t, Float_t *, Float_t *, Option_t *)
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Paint fill area in CurrentPad World coordinates.
+///
+///  If option[0] == 'C' no clipping
+///  If option[0] == 'i' paint during ExecuteEvent (interactive)
 
-void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
+void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *option)
 {
    if (nn < 3)
       return;
-   Double_t xmin,xmax,ymin,ymax;
+   Double_t xmin, xmax, ymin, ymax;
+   Bool_t mustClip = kTRUE;
    if (TestBit(TGraph::kClipFrame)) {
       xmin = fUxmin; ymin = fUymin; xmax = fUxmax; ymax = fUymax;
    } else {
       xmin = fX1; ymin = fY1; xmax = fX2; ymax = fY2;
+      if (option && (*option == 'C')) mustClip = kFALSE;
    }
 
-   Int_t nc = 2*nn+1;
-   std::vector<Double_t> x(nc, 0.);
-   std::vector<Double_t> y(nc, 0.);
+   std::vector<Double_t> xclip, yclip;
 
-   Int_t n = ClipPolygon(nn, xx, yy, nc, x.data(), y.data(), xmin, ymin, xmax, ymax);
-   if (!n)
+   if (mustClip) {
+      Int_t nc = 2*nn+1;
+      xclip.resize(nc, 0.);
+      yclip.resize(nc, 0.);
+      Int_t n = ClipPolygon(nn, xx, yy, nc, xclip.data(), yclip.data(), xmin, ymin, xmax, ymax);
+      if (!n)
+         return;
+      nn = n;
+      xx = xclip.data();
+      yy = yclip.data();
+   }
+
+   if (!GetPadPaint()) {
+      if (option && strchr(option, 'i'))
+         fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(nn, xx, yy));
       return;
+   }
 
    auto pp = GetPainter();
    if (!pp)
@@ -4133,9 +4162,9 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    // Paint the fill area with hatches
    Int_t fillstyle = pp->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000)
-      PaintFillAreaHatches(nn, x.data(), y.data(), fillstyle);
+      PaintFillAreaHatches(nn, xx, yy, fillstyle);
    else
-      pp->DrawFillArea(n, x.data(), y.data());
+      pp->DrawFillArea(nn, xx, yy);
 
    Modified();
 }
@@ -4459,71 +4488,26 @@ void TPad::PaintMarker3D(Double_t x, Double_t y, Double_t z)
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Paint polyline in CurrentPad World coordinates.
-
-void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
-{
-   if (n < 2) return;
-
-   Double_t xmin,xmax,ymin,ymax;
-   if (TestBit(TGraph::kClipFrame)) {
-      xmin = fUxmin; ymin = fUymin; xmax = fUxmax; ymax = fUymax;
-   } else {
-      xmin = fX1; ymin = fY1; xmax = fX2; ymax = fY2;
-   }
-   Int_t i, i1=-1,np=1;
-   for (i=0; i<n-1; i++) {
-      Double_t x1=x[i];
-      Double_t y1=y[i];
-      Double_t x2=x[i+1];
-      Double_t y2=y[i+1];
-      Int_t iclip = Clip(&x[i],&y[i],xmin,ymin,xmax,ymax);
-      if (iclip == 2) {
-         i1 = -1;
-         continue;
-      }
-      np++;
-      if (i1 < 0)
-         i1 = i;
-      if (iclip == 0 && i < n-2)
-         continue;
-      if (auto pp = GetPainter()) {
-         pp->OnPad(this);
-         pp->DrawPolyLine(np, &x[i1], &y[i1]);
-      }
-      if (iclip) {
-         x[i] = x1;
-         y[i] = y1;
-         x[i+1] = x2;
-         y[i+1] = y2;
-      }
-      i1 = -1;
-      np = 1;
-   }
-
-   Modified();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Paint polyline in CurrentPad World coordinates.
 ///
 ///  If option[0] == 'C' no clipping
+///  If option[0] == 'i' paint during ExecuteEvent (interactive)
 
-void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
+void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *option)
 {
-   if (n < 2) return;
+   auto pp = GetPainter();
+   if ((n < 2) || !pp)
+      return;
 
-   Double_t xmin,xmax,ymin,ymax;
+   Double_t xmin, xmax, ymin, ymax;
    Bool_t mustClip = kTRUE;
    if (TestBit(TGraph::kClipFrame)) {
       xmin = fUxmin; ymin = fUymin; xmax = fUxmax; ymax = fUymax;
    } else {
       xmin = fX1; ymin = fY1; xmax = fX2; ymax = fY2;
-      if (option && (option[0] == 'C')) mustClip = kFALSE;
+      if (option && (*option == 'C')) mustClip = kFALSE;
    }
-
-   Int_t i, i1=-1, np = 1, iclip = 0;
-
-   for (i=0; i < n-1; i++) {
+   Int_t i1 = -1, np = 1, iclip = 0;
+   for (Int_t i = 0; i < n - 1; i++) {
       Double_t x1 = x[i];
       Double_t y1 = y[i];
       Double_t x2 = x[i+1];
@@ -4540,7 +4524,10 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
          i1 = i;
       if (iclip == 0 && i < n-2)
          continue;
-      if (auto pp = GetPainter()) {
+      if (!GetPadPaint()) {
+         if (option && strchr(option, 'i'))
+            fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(np, &x[i1], &y[i1], pp->GetLineWidth()));
+      } else {
          pp->OnPad(this);
          pp->DrawPolyLine(np, &x[i1], &y[i1]);
       }
@@ -4554,21 +4541,88 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       np = 1;
    }
 
-   Modified();
+   if (GetPadPaint())
+      Modified();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Paint polyline in CurrentPad World coordinates.
+///
+///  If option[0] == 'C' no clipping
+///  If option[0] == 'i' paint during ExecuteEvent (interactive)
+
+void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
+{
+   auto pp = GetPainter();
+   if ((n < 2) || !pp)
+      return;
+
+   Double_t xmin,xmax,ymin,ymax;
+   Bool_t mustClip = kTRUE;
+   if (TestBit(TGraph::kClipFrame)) {
+      xmin = fUxmin; ymin = fUymin; xmax = fUxmax; ymax = fUymax;
+   } else {
+      xmin = fX1; ymin = fY1; xmax = fX2; ymax = fY2;
+      if (option && (*option == 'C')) mustClip = kFALSE;
+   }
+
+   Int_t i1 = -1, np = 1, iclip = 0;
+
+   for (Int_t i = 0; i < n-1; i++) {
+      Double_t x1 = x[i];
+      Double_t y1 = y[i];
+      Double_t x2 = x[i+1];
+      Double_t y2 = y[i+1];
+      if (mustClip) {
+         iclip = Clip(&x[i],&y[i],xmin,ymin,xmax,ymax);
+         if (iclip == 2) {
+            i1 = -1;
+            continue;
+         }
+      }
+      np++;
+      if (i1 < 0)
+         i1 = i;
+      if (iclip == 0 && i < n-2)
+         continue;
+      if (!GetPadPaint()) {
+         if (option && strchr(option, 'i'))
+            fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(np, &x[i1], &y[i1], pp->GetLineWidth()));
+      } else {
+         pp->OnPad(this);
+         pp->DrawPolyLine(np, &x[i1], &y[i1]);
+      }
+      if (iclip) {
+         x[i] = x1;
+         y[i] = y1;
+         x[i+1] = x2;
+         y[i+1] = y2;
+      }
+      i1 = -1;
+      np = 1;
+   }
+
+   if (GetPadPaint())
+      Modified();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Paint polyline in CurrentPad NDC coordinates.
 
-void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
+void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *option)
 {
-   if (n <= 0)
+   auto pp = GetPainter();
+   if ((n < 2) || !pp)
       return;
 
-   if (auto pp = GetPainter()) {
-      pp->OnPad(this);
-      pp->DrawPolyLineNDC(n, x, y);
+   if (!GetPadPaint()) {
+      if (option && strchr(option, 'i'))
+         fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(n, x, y, pp->GetLineWidth(), kTRUE));
+      return;
    }
+
+   pp->OnPad(this);
+   pp->DrawPolyLineNDC(n, x, y);
 
    Modified();
 }
