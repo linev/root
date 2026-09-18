@@ -2557,22 +2557,30 @@ void TCanvas::Update()
 
    if (!fCanvasImp->PerformUpdate(kFALSE)) {
 
-      if (!IsBatch())
-         FeedbackMode(kFALSE); // Goto double buffer mode
-
-      if (!UseGL() || fGLDevice == -1)
-         PaintModified(); // Repaint all modified pad's
-
-      Flush(); // Copy all pad pixmaps to the screen
+      Bool_t only_oper = kFALSE;
+      Bool_t withgl = UseGL() && (fGLDevice != -1);
 
       if (!IsBatch()) {
-         // paint interactive operations at the end
+         FeedbackMode(kFALSE); // Goto double buffer mode
+         only_oper = PaintOperations(-1) == 0; // check if only extra draw operations present
+      }
+
+      if (!withgl && !only_oper)
+         PaintModified(); // Repaint all modified pad's
+
+      // gl - repaint everything, or copypixmaps
+      if (withgl || !only_oper)
+         Flush();
+
+      if (!IsBatch()) {
          FeedbackMode(kTRUE);
-         if (!UseGL() || fGLDevice == -1)
+         if (!withgl)
             PaintOperations(kTRUE);
       }
 
-      SetCursor(kCross);
+      // only draw operation should not modify cursor
+      if (!only_oper)
+         SetCursor(kCross);
    }
 
    fUpdating = kFALSE;

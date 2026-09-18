@@ -135,7 +135,7 @@ protected:
    void          PaintBorder(Color_t color, Bool_t tops);
    void          PaintBorderPS(Double_t xl,Double_t yl,Double_t xt,Double_t yt,Int_t bmode,Int_t bsize,Int_t dark,Int_t light) override;
    void          PaintDate();
-   void          PaintOperations(Bool_t useXor = kFALSE);
+   Int_t         PaintOperations(Int_t useXor = 0);
    void          SavePrimitive(std::ostream &out, Option_t *option = "") override;
    void          SetBatch(Bool_t batch=kTRUE) override;
 

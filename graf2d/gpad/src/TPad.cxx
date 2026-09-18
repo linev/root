@@ -3996,39 +3996,53 @@ void TPad::PaintModified()
 /// Perform buffered paint operations
 /// Used for interactivity functionality
 /// immediately after normal painting is performed
+/// When useXor < 0 only check if any pad modified or
+/// only buffered paint operations present
+/// Returns -1 any of pads was modified
+///          0 only draw operations exists
+///          1 none is present
 
-void TPad::PaintOperations(Bool_t useXor)
+Int_t TPad::PaintOperations(Int_t useXor)
 {
-   auto pp = GetPainter();
-   if (!pp)
-      return;
+   if (useXor < 0) {
+      if (IsModified())
+         return -1;
+   } else {
+      auto pp = GetPainter();
+      if (!pp)
+         return -1;
 
-   Bool_t support_xor = pp->IsNative() && !pp->IsCocoa() && (GetGLDevice() == -1);
+      Bool_t support_xor = pp->IsNative() && !pp->IsCocoa() && (GetGLDevice() == -1);
 
-   pp->OnPad(this);
+      pp->OnPad(this);
 
-   if (useXor && support_xor)
-      for (auto &oper : fDrawOperXor)
+      if (useXor && support_xor)
+         for (auto &oper : fDrawOperXor)
+            oper.second->Draw(pp);
+
+      fDrawOperXor.clear();
+
+      for (auto &oper : fDrawOper)
          oper.second->Draw(pp);
 
-   fDrawOperXor.clear();
+      if (useXor && support_xor)
+         std::swap(fDrawOperXor, fDrawOper);
+      else
+         fDrawOper.clear();
 
-   for (auto &oper : fDrawOper)
-      oper.second->Draw(pp);
+      if (!useXor)
+         return -1;
+   }
 
-   if (useXor && support_xor)
-      std::swap(fDrawOperXor, fDrawOper);
-   else
-      fDrawOper.clear();
-
-   if (!useXor)
-      return;
+   Int_t res = fDrawOperXor.size() + fDrawOper.size() ? 0 : 1;
 
    TIter next(GetListOfPrimitives());
    while (auto obj = next()) {
       if (auto pad = dynamic_cast<TPad *>(obj))
-         pad->PaintOperations(useXor);
+         res = TMath::Min(pad->PaintOperations(useXor), res);
    }
+
+   return res;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
