@@ -33,7 +33,7 @@ class TBoxInteractive : public TVirtualPad::TInteractive {
 
       Bool_t IsOpaque(TVirtualPad &parent) const;
 
-      Bool_t ProcessMouseMove(TVirtualPad &parent, Int_t px, Int_t py, Bool_t canX = kTRUE, Bool_t canY = kTRUE);
+      Bool_t ProcessMouseMove(TVirtualPad &parent, Int_t px, Int_t py, Bool_t canX = kTRUE, Bool_t canY = kTRUE, Double_t aspectRatio = 0.);
 
       void ApplyChanges(TVirtualPad &parent);
 
