@@ -137,14 +137,16 @@ class TPadDrawOperation {
 class TPadPolyDrawOperation : public TPadDrawOperation {
    protected:
       std::vector<Double_t> fX, fY;
-      Width_t fLWidth = 0;
+      Bool_t fHollow = kFALSE;
+      Width_t fLWidth = 1;
       Bool_t fNDC = kFALSE;
    public:
       template<typename T>
-      TPadPolyDrawOperation(Int_t n, T *x, T *y, Width_t lwidth = -111, Bool_t ndc = kFALSE)
+      TPadPolyDrawOperation(Int_t n, T *x, T *y, Bool_t hollow, Width_t lwidth = 1, Bool_t ndc = kFALSE)
       {
          fX.assign(x, x + n);
          fY.assign(y, y + n);
+         fHollow = hollow;
          fLWidth = lwidth;
          fNDC = ndc;
       }
@@ -152,8 +154,7 @@ class TPadPolyDrawOperation : public TPadDrawOperation {
 
       void Draw(TVirtualPadPainter *pp) override
       {
-         if (fLWidth != -111) {
-            if (fLWidth < 1) fLWidth = 1;
+         if (fHollow) {
             pp->SetAttLine({kBlack, 1, fLWidth});
             if (fNDC)
                pp->DrawPolyLineNDC(fX.size(), fX.data(), fY.data());
@@ -4008,12 +4009,12 @@ void TPad::PaintOperations(Bool_t useXor)
 
    if (useXor && support_xor)
       for (auto &oper : fDrawOperXor)
-         oper->Draw(pp);
+         oper.second->Draw(pp);
 
    fDrawOperXor.clear();
 
    for (auto &oper : fDrawOper)
-      oper->Draw(pp);
+      oper.second->Draw(pp);
 
    if (useXor && support_xor)
       std::swap(fDrawOperXor, fDrawOper);
@@ -4044,10 +4045,11 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
       return;
 
    if (!GetPadPaint()) {
-      if (option && strchr(option, 'i')) {
+      if (option && *option == 'i') {
          Double_t x[5] = {x1, x2, x2, x1, x1};
          Double_t y[5] = {y1, y1, y2, y2, y1};
-         fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(5, x, y, strchr(option, 'l') ? pp->GetLineWidth() : -111));
+         Bool_t drawLine = option[1] == 'l';
+         fDrawOper[option] = std::make_unique<TPadPolyDrawOperation>(5, x, y, drawLine, pp->GetLineWidth());
       }
       return;
    }
@@ -4148,8 +4150,8 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *option)
    }
 
    if (!GetPadPaint()) {
-      if (option && strchr(option, 'i'))
-         fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(nn, xx, yy));
+      if (option && *option == 'i')
+         fDrawOper[option] = std::make_unique<TPadPolyDrawOperation>(nn, xx, yy, kFALSE);
       return;
    }
 
@@ -4525,8 +4527,8 @@ void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *option)
       if (iclip == 0 && i < n-2)
          continue;
       if (!GetPadPaint()) {
-         if (option && strchr(option, 'i'))
-            fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(np, &x[i1], &y[i1], pp->GetLineWidth()));
+         if (option && *option == 'i')
+            fDrawOper[option] = std::make_unique<TPadPolyDrawOperation>(np, &x[i1], &y[i1], kTRUE, pp->GetLineWidth());
       } else {
          pp->OnPad(this);
          pp->DrawPolyLine(np, &x[i1], &y[i1]);
@@ -4586,8 +4588,8 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       if (iclip == 0 && i < n-2)
          continue;
       if (!GetPadPaint()) {
-         if (option && strchr(option, 'i'))
-            fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(np, &x[i1], &y[i1], pp->GetLineWidth()));
+         if (option && *option == 'i')
+            fDrawOper[option] = std::make_unique<TPadPolyDrawOperation>(np, &x[i1], &y[i1], kTRUE, pp->GetLineWidth());
       } else {
          pp->OnPad(this);
          pp->DrawPolyLine(np, &x[i1], &y[i1]);
@@ -4616,8 +4618,8 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       return;
 
    if (!GetPadPaint()) {
-      if (option && strchr(option, 'i'))
-         fDrawOper.emplace_back(std::make_unique<TPadPolyDrawOperation>(n, x, y, pp->GetLineWidth(), kTRUE));
+      if (option && *option == 'i')
+         fDrawOper[option] = std::make_unique<TPadPolyDrawOperation>(n, x, y, kTRUE, pp->GetLineWidth(), kTRUE);
       return;
    }
 
