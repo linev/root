@@ -579,20 +579,12 @@ TVirtualPadPainter::ESaveImageResult TPadPainter::SaveAsImage(TVirtualPad *pad, 
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Fill image object with the pixel data from the pad
-/// Implements special handling for X11 where ASImage has native implementation
+/// Use TASUtils::FillImageFromWindow method which provides native X11 handling
 
 Bool_t TPadPainter::FillImageFromPad(TImage *image, TVirtualPad *pad) const
 {
    if (!image || !pad)
       return kFALSE;
-
-   gVirtualX->Update(1);
-   if (!gThreadXAR) {
-      gSystem->Sleep(10);
-      gSystem->ProcessEvents();
-      gSystem->Sleep(10);
-      gSystem->ProcessEvents();
-   }
 
    auto width = pad->GetPadWidth();
    auto height = pad->GetPadHeight();
@@ -602,19 +594,7 @@ Bool_t TPadPainter::FillImageFromPad(TImage *image, TVirtualPad *pad) const
 
    Window_t wd = gVirtualX->GetCurrentWindow();
 
-   if (IsX11()) {
-     if (!TASUtils::FromX11Window(image, gVirtualX->GetCurrentWindow(), 0, 0, pad->GetPadWidth(), pad->GetPadHeight()))
-        return kFALSE;
-   } else {
-      unsigned char *bits = gVirtualX->GetColorBits(wd, 0, 0, width, height);
-      if (!bits)
-         return kFALSE;
-
-      image->FromBitmap(bits, width, height);
-      delete [] bits;
-   }
-
-   return image->IsValid();
+   return TASUtils::FillImageFromWindow(image, wd, width, height);
 }
 
 //Aux. private functions.
