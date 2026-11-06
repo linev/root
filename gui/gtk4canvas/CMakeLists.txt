@@ -8,6 +8,17 @@
 # CMakeLists.txt file for building ROOT gui/gtk4canvas package
 ############################################################################
 
+if(MSVC)
+  # for debugging purposes set
+  set(PKG_CONFIG_EXECUTABLE "C:/git/vcpkg/installed/x64-windows/tools/pkgconf/pkgconf.exe" CACHE FILEPATH "pkg-config executable")
+
+  # Tell pkg-config exactly where the gtkmm .pc file registry lives inside vcpkg
+  set(ENV{PKG_CONFIG_PATH} "C:/git/vcpkg/installed/x64-windows/lib/pkgconfig")
+
+  # when call cmake
+  #  cmake -DCMAKE_TOOLCHAIN_FILE="C:/git/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
+endif()
+
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(GTKMM REQUIRED IMPORTED_TARGET gtkmm-4.0)
